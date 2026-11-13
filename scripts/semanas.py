@@ -32,6 +32,15 @@ def ler_matriz(arq):
     return [[float(x) for x in l.split(",")] for l in arq.read_text().splitlines() if l.strip()]
 
 
+MATRIZES = ("matriz_km.csv", "matriz_h.csv", "matriz_l.csv", "matriz_km_eco.csv", "matriz_h_eco.csv", "matriz_l_eco.csv")
+
+
+def carregar_matrizes(pasta=None):
+    """Todas as matrizes que existirem na pasta: km e h sempre; litros e o caminho econômico se for perfil de caminhão."""
+    pasta = pasta or BASE
+    return {nome: ler_matriz(pasta / nome) for nome in MATRIZES if (pasta / nome).exists()}
+
+
 def sortear(seed, fazendas):
     """Devolve (volume, pedidos); cada pedido = dict(faz=índice na matriz, nome, lat, lon, dem, dia, u)."""
     volume = VOLUME_DA_SEED[(seed - 1) % len(VOLUME_DA_SEED)]
@@ -47,7 +56,7 @@ def sortear(seed, fazendas):
     return volume, pedidos
 
 
-def rodar_solver(pedidos, km, h, frota_livre, env_extra=None):
+def rodar_solver(pedidos, mats, frota_livre, env_extra=None):
     tmp = Path(tempfile.mkdtemp())
     try:
         (tmp / "dados").mkdir()
@@ -58,7 +67,7 @@ def rodar_solver(pedidos, km, h, frota_livre, env_extra=None):
             for k, p in enumerate(pedidos, 1):
                 w.writerow([k, p["nome"], p["lat"], p["lon"], p["dem"], p["dia"], p["u"]])
         idx = [0] + [p["faz"] for p in pedidos]
-        for nome, M in (("matriz_km.csv", km), ("matriz_h.csv", h)):
+        for nome, M in mats.items():
             with open(tmp / "dados" / nome, "w") as f:
                 for i in idx:
                     f.write(",".join(f"{M[i][j]:.4f}" for j in idx) + "\n")
@@ -74,15 +83,15 @@ def rodar_solver(pedidos, km, h, frota_livre, env_extra=None):
         shutil.rmtree(tmp, ignore_errors=True)
 
 
-def uma_semana(seed, fazendas, km, h):
+def uma_semana(seed, fazendas, mats):
     volume, pedidos = sortear(seed, fazendas)
-    res, erro = rodar_solver(pedidos, km, h, frota_livre=False)
+    res, erro = rodar_solver(pedidos, mats, frota_livre=False)
     frota_livre, motivo = False, ""
     if res is None:
         if "frota estourada" not in erro:
             raise RuntimeError(f"semana {seed}: o solver falhou:\n{erro}")
         motivo = erro.strip().splitlines()[1] if len(erro.strip().splitlines()) > 1 else erro.strip()
-        res, erro = rodar_solver(pedidos, km, h, frota_livre=True)
+        res, erro = rodar_solver(pedidos, mats, frota_livre=True)
         if res is None:
             raise RuntimeError(f"semana {seed}: falhou mesmo com frota livre:\n{erro}")
         frota_livre = True
@@ -104,11 +113,11 @@ def main():
     s0 = int(sys.argv[1]) if len(sys.argv) > 1 else 1
     s1 = int(sys.argv[2]) if len(sys.argv) > 2 else 20
     fazendas = list(csv.DictReader(open(BASE / "fazendas.csv", encoding="utf-8")))
-    km, h = ler_matriz(BASE / "matriz_km.csv"), ler_matriz(BASE / "matriz_h.csv")
-    assert len(km) == len(fazendas) + 1, "matriz e fazendas com tamanhos diferentes: rode osrm_matriz.py de novo"
+    mats = carregar_matrizes()
+    assert len(mats["matriz_km.csv"]) == len(fazendas) + 1, "matriz e fazendas com tamanhos diferentes: rode osrm_matriz.py de novo"
     subprocess.run(["cargo", "build", "--release", "-q"], cwd=RAIZ / "solver", check=True)
     with ThreadPoolExecutor(max_workers=max(1, (os.cpu_count() or 2) - 1)) as ex:
-        semanas = list(ex.map(lambda s: uma_semana(s, fazendas, km, h), range(s0, s1 + 1)))
+        semanas = list(ex.map(lambda s: uma_semana(s, fazendas, mats), range(s0, s1 + 1)))
 
     eco = lambda s, b, k: (1 - s["politicas"][k]["custo"] / s["bases"][b]["custo"]) * 100
     resumo = {}

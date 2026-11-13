@@ -1,30 +1,30 @@
 [
  {
   "nome": "A) Manual: mais perto, tudo no mesmo dia",
-  "custo": 35028.16
+  "custo": 34350.55
  },
  {
   "nome": "B) Otimizado, tudo no mesmo dia",
-  "custo": 29391.92
+  "custo": 28245.16
  },
  {
   "nome": "C) Otimizado, 25% aceitam até 2 dias",
-  "custo": 26711.39
+  "custo": 25490.53
  },
  {
   "nome": "C) Otimizado, 50% aceitam até 2 dias",
-  "custo": 25137.71
+  "custo": 23973.35
  },
  {
   "nome": "C) Otimizado, 75% aceitam até 2 dias",
-  "custo": 24465.47
+  "custo": 23171.04
  },
  {
   "nome": "C) Otimizado, 100% aceitam até 2 dias",
-  "custo": 24121.31
+  "custo": 22905.57
  },
  {
   "nome": "A2) Manual por região, tudo no mesmo dia",
-  "custo": 30634.31
+  "custo": 29541.7
  }
 ]

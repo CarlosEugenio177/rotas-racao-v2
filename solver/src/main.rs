@@ -66,9 +66,11 @@ fn ler_premissas(raiz: &PathBuf) -> Premissas {
     let arq = raiz.join("dados/premissas.toml");
     let txt = fs::read_to_string(&arq).unwrap_or_else(|_| panic!("não achei {:?}", arq));
     let mut v: Vec<(String, f64)> = vec![];
+    let mut ignorar = false; // a seção [perfil_caminhao] é só dos scripts que montam o roteador
     for l in txt.lines() {
         let l = l.split('#').next().unwrap().trim();
-        if l.is_empty() || l.starts_with('[') { continue; }
+        if l.starts_with('[') { ignorar = l == "[perfil_caminhao]"; continue; }
+        if l.is_empty() || ignorar { continue; }
         let (k, x) = l.split_once('=').unwrap_or_else(|| panic!("premissas.toml: linha inválida: {l}"));
         let x: f64 = x.trim().parse().unwrap_or_else(|_| panic!("premissas.toml: valor inválido em: {l}"));
         v.push((k.trim().to_string(), x));
@@ -150,9 +152,36 @@ struct Inst {
     litros_vazio: Vec<Vec<f64>>,
     h_cam: Vec<Vec<f64>>,
     km: Vec<Vec<f64>>,
+    // Segundo caminho de cada par (o de menor consumo), quando existe dados/matriz_*_eco.csv.
+    eco: Option<Caminho>,
+    perfil_caminhao: bool, // as matrizes já são de caminhão (tempo e litros vêm prontos, por trecho)
     dias: usize,
     janela: Vec<(usize, usize)>,
     ativo: Vec<bool>, // false = não cabe numa jornada nem sozinho (precisa pernoite)
+}
+
+struct Caminho {
+    litros_vazio: Vec<Vec<f64>>,
+    h_cam: Vec<Vec<f64>>,
+    km: Vec<Vec<f64>>,
+}
+
+impl Inst {
+    /// Trecho de i para j com `carga` toneladas no caminhão: (km, horas, litros, usou o caminho econômico?).
+    /// Quando há dois caminhos (mais rápido e de menor consumo), fica o de menor custo para essa carga.
+    #[inline]
+    fn arco(&self, i: usize, j: usize, carga: f64) -> (f64, f64, f64, bool) {
+        let p = p();
+        let fator = 1.0 + p.alpha_carga * carga / p.capacidade_t;
+        let (h1, l1) = (self.h_cam[i][j], self.litros_vazio[i][j] * fator);
+        if let Some(e) = &self.eco {
+            let (h2, l2) = (e.h_cam[i][j], e.litros_vazio[i][j] * fator);
+            let c1 = p.peso_diesel * (l1 * p.diesel_rs_l) + p.peso_tempo * (h1 * p.motorista_rs_h);
+            let c2 = p.peso_diesel * (l2 * p.diesel_rs_l) + p.peso_tempo * (h2 * p.motorista_rs_h);
+            if c2 < c1 - 1e-9 { return (e.km[i][j], h2, l2, true); }
+        }
+        (self.km[i][j], h1, l1, false)
+    }
 }
 
 fn consumo_l_km(vel_kmh: f64) -> f64 {
@@ -179,18 +208,34 @@ fn carregar(raiz: &PathBuf) -> Inst {
     let h = ler_matriz(&raiz.join("dados/matriz_h.csv"));
     assert_eq!(km.len(), ped.len(), "matriz e pedidos com tamanhos diferentes — rode osrm_matriz.py de novo");
     let n = ped.len();
-    let mut litros = vec![vec![0.0; n]; n];
-    let mut hc = vec![vec![0.0; n]; n];
-    for i in 0..n {
-        for j in 0..n {
-            if i == j { continue; }
-            let v = if h[i][j] > 0.0 { km[i][j] / h[i][j] } else { 60.0 };
-            litros[i][j] = km[i][j] * consumo_l_km(v);
-            hc[i][j] = h[i][j] * p().fator_caminhao;
+    // Com dados/matriz_l.csv as matrizes vêm do roteador com perfil de CAMINHÃO: o tempo já é de
+    // caminhão e os litros (caminhão vazio) já foram somados trecho a trecho. Sem esse arquivo
+    // (OSRM público, perfil de carro), vale a estimativa antiga pela velocidade média do par.
+    let arq_l = raiz.join("dados/matriz_l.csv");
+    let perfil_caminhao = arq_l.exists();
+    let (litros, hc) = if perfil_caminhao {
+        (ler_matriz(&arq_l), h.clone())
+    } else {
+        let mut litros = vec![vec![0.0; n]; n];
+        let mut hc = vec![vec![0.0; n]; n];
+        for i in 0..n {
+            for j in 0..n {
+                if i == j { continue; }
+                let v = if h[i][j] > 0.0 { km[i][j] / h[i][j] } else { 60.0 };
+                litros[i][j] = km[i][j] * consumo_l_km(v);
+                hc[i][j] = h[i][j] * p().fator_caminhao;
+            }
         }
-    }
+        (litros, hc)
+    };
+    let arq_eco = raiz.join("dados/matriz_l_eco.csv");
+    let so_rapido = std::env::var("SO_RAPIDO").map(|v| v == "1").unwrap_or(false);
+    let eco = if perfil_caminhao && arq_eco.exists() && !so_rapido {
+        Some(Caminho { litros_vazio: ler_matriz(&arq_eco), h_cam: ler_matriz(&raiz.join("dados/matriz_h_eco.csv")),
+                       km: ler_matriz(&raiz.join("dados/matriz_km_eco.csv")) })
+    } else { None };
     let dias = ped.iter().map(|p| p.dia).max().unwrap() + 1;
-    let mut inst = Inst { janela: vec![(0, 0); n], ativo: vec![true; n], ped, litros_vazio: litros, h_cam: hc, km, dias };
+    let mut inst = Inst { janela: vec![(0, 0); n], ativo: vec![true; n], ped, litros_vazio: litros, h_cam: hc, km, eco, perfil_caminhao, dias };
     inst.ativo[0] = false;
     for i in 1..n {
         let a = avalia_viagem(&inst, &[i]);
@@ -218,6 +263,7 @@ struct Av {
     carga: f64,
     custo: f64,
     ok: bool,
+    trechos_eco: usize, // em quantos trechos o caminho de menor consumo ganhou do mais rápido
 }
 
 fn avalia_viagem(inst: &Inst, v: &[usize]) -> Av {
@@ -228,9 +274,11 @@ fn avalia_viagem(inst: &Inst, v: &[usize]) -> Av {
     let mut carga = carga0;
     let mut prev = 0;
     for &i in v.iter().chain(std::iter::once(&0)) {
-        a.km += inst.km[prev][i];
-        a.h += inst.h_cam[prev][i];
-        a.litros += inst.litros_vazio[prev][i] * (1.0 + p.alpha_carga * carga / p.capacidade_t);
+        let (km, h, litros, eco) = inst.arco(prev, i, carga);
+        a.km += km;
+        a.h += h;
+        a.litros += litros;
+        if eco { a.trechos_eco += 1; }
         if i != 0 {
             a.h += p.descarga_h;
             carga -= inst.ped[i].demanda;
@@ -413,7 +461,7 @@ fn manual_regiao(inst: &Inst) -> Sol {
 }
 
 fn clarke_wright(inst: &Inst, cli: &[usize]) -> Vec<Vec<usize>> {
-    let c = |i: usize, j: usize| p().peso_diesel * (inst.litros_vazio[i][j] * p().diesel_rs_l) + p().peso_tempo * (inst.h_cam[i][j] * p().motorista_rs_h);
+    let c = |i: usize, j: usize| { let (_, h, l, _) = inst.arco(i, j, 0.0); p().peso_diesel * (l * p().diesel_rs_l) + p().peso_tempo * (h * p().motorista_rs_h) };
     let mut sav = vec![];
     for (a, &i) in cli.iter().enumerate() {
         for &j in &cli[a + 1..] {
@@ -781,8 +829,7 @@ fn exato_dia(inst: &Inst, cli: &[usize]) -> Option<Vec<Vec<usize>>> {
         carga[m] = carga[m & (m - 1)] + inst.ped[cli[b]].demanda;
     }
     let arco = |de: usize, para: usize, carga_t: f64| -> (f64, f64) {
-        let litros = inst.litros_vazio[de][para] * (1.0 + p.alpha_carga * carga_t / q);
-        let h = inst.h_cam[de][para];
+        let (_, h, litros, _) = inst.arco(de, para, carga_t);
         (p.peso_diesel * (litros * p.diesel_rs_l), h)
     };
     let custo_h = |h: f64| p.peso_tempo * (h * p.motorista_rs_h);
@@ -972,17 +1019,20 @@ struct Res {
     cam_dia: Vec<usize>,
     mesmo_dia: f64,
     espera_media: f64,
+    trechos: usize,
+    trechos_eco: usize,
 }
 
 fn resume(inst: &Inst, s: &Sol, nome: &str, flex: f64) -> Res {
     let mut r = Res { nome: nome.into(), flex, custo: custo_real(inst, s), km: 0.0, litros: 0.0, h: 0.0, viagens: 0,
-        cam_dia: vec![], mesmo_dia: 0.0, espera_media: 0.0 };
+        cam_dia: vec![], mesmo_dia: 0.0, espera_media: 0.0, trechos: 0, trechos_eco: 0 };
     let (mut n, mut mesmo, mut espera) = (0.0, 0.0, 0.0);
     for (d, dia) in s.iter().enumerate() {
         let mut horas = vec![];
         for v in dia {
             let a = avalia_viagem(inst, v);
             r.km += a.km; r.litros += a.litros; r.h += a.h; r.viagens += 1;
+            r.trechos += v.len() + 1; r.trechos_eco += a.trechos_eco;
             horas.push(a.h);
             for &x in v {
                 n += 1.0;
@@ -999,8 +1049,8 @@ fn resume(inst: &Inst, s: &Sol, nome: &str, flex: f64) -> Res {
 
 fn json_sol(inst: &Inst, s: &Sol, r: &Res) -> String {
     let mut o = String::new();
-    let _ = write!(o, r#"{{"nome":"{}","flex":{:.2},"custo":{:.2},"km":{:.1},"litros":{:.1},"horas":{:.1},"viagens":{},"mesmo_dia_pct":{:.1},"caminhoes_dia":{:?},"dias":["#,
-        r.nome, r.flex, r.custo, r.km, r.litros, r.h, r.viagens, r.mesmo_dia, r.cam_dia);
+    let _ = write!(o, r#"{{"nome":"{}","flex":{:.2},"custo":{:.2},"km":{:.1},"litros":{:.1},"horas":{:.1},"viagens":{},"mesmo_dia_pct":{:.1},"caminhoes_dia":{:?},"trechos":{},"trechos_eco":{},"dias":["#,
+        r.nome, r.flex, r.custo, r.km, r.litros, r.h, r.viagens, r.mesmo_dia, r.cam_dia, r.trechos, r.trechos_eco);
     for (d, dia) in s.iter().enumerate() {
         if d > 0 { o.push(','); }
         o.push('[');
@@ -1027,6 +1077,8 @@ fn main() {
     if !fora.is_empty() {
         println!("  {} pedido(s) não cabem numa jornada nem sozinhos (precisam pernoite), fora da comparação: {}", fora.len(), fora.join(", "));
     }
+    println!("  estradas: perfil de {}{}", if inst.perfil_caminhao { "caminhão (tempo e consumo por trecho)" } else { "carro (tempo x fator, consumo pela velocidade média)" },
+        if inst.eco.is_some() { ", dois caminhos por par (mais rápido e de menor consumo)" } else { "" });
     if p.peso_diesel != 1.0 || p.peso_tempo != 1.0 {
         println!("  busca com pesos: diesel x{}, tempo x{} (os custos mostrados continuam em R$ reais)", p.peso_diesel, p.peso_tempo);
     }
@@ -1096,8 +1148,9 @@ fn main() {
     js.push_str("],\"base_regiao\":");
     define_janelas(&mut inst, 0.0);
     js.push_str(&json_sol(&inst, &a2, &ra2));
-    let _ = write!(js, r#","parametros":{{"capacidade_t":{},"jornada_h":{},"frota":{},"folga_dias":{},"diesel_rs_l":{},"motorista_rs_h":{},"caminhao_rs_dia":{},"fator_caminhao":{},"peso_diesel":{},"peso_tempo":{}}},"dias_exatos":{},"fora":{:?},"dias":{}}}"#,
-        p.capacidade_t, p.jornada_h, p.frota, p.folga_dias, p.diesel_rs_l, p.motorista_rs_h, p.caminhao_rs_dia, p.fator_caminhao, p.peso_diesel, p.peso_tempo, dias_exatos,
+    let _ = write!(js, r#","parametros":{{"capacidade_t":{},"jornada_h":{},"frota":{},"folga_dias":{},"diesel_rs_l":{},"motorista_rs_h":{},"caminhao_rs_dia":{},"fator_caminhao":{},"peso_diesel":{},"peso_tempo":{},"perfil":"{}","caminhos":{}}},"dias_exatos":{},"fora":{:?},"dias":{}}}"#,
+        p.capacidade_t, p.jornada_h, p.frota, p.folga_dias, p.diesel_rs_l, p.motorista_rs_h, p.caminhao_rs_dia, if inst.perfil_caminhao { 1.0 } else { p.fator_caminhao }, p.peso_diesel, p.peso_tempo,
+        if inst.perfil_caminhao { "caminhao" } else { "carro" }, if inst.eco.is_some() { 2 } else { 1 }, dias_exatos,
         (1..inst.ped.len()).filter(|&i| !inst.ativo[i]).collect::<Vec<_>>(), inst.dias);
     fs::create_dir_all(raiz.join("saida")).unwrap();
     fs::write(raiz.join("saida/resultado.json"), js).unwrap();

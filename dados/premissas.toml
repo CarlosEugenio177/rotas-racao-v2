@@ -30,3 +30,15 @@ folga_dias = 2             # quantos dias um cliente flexível aceita esperar
 [deposito]
 deposito_lat = -5.0892     # Teresina (mesmo ponto de dados/cidades.csv); usado no despacho por região
 deposito_lon = -42.8019
+
+[perfil_caminhao]
+# Usado só para montar o perfil de caminhão do OSRM local (scripts/perfil_caminhao.py) e as
+# matrizes de caminhão (scripts/matriz_caminhao.py). O solver não lê estas chaves.
+# Tudo aqui é estimativa nossa, não medição.
+fator_vel_caminhao = 0.8      # o caminhão anda a 80% da velocidade do carro em cada trecho (a mesma premissa do antigo "tempo x 1,25")
+vel_max_caminhao_kmh = 80.0   # velocidade máxima do caminhão em qualquer via
+vel_ref_caminhao_kmh = 56.0   # a partir desta velocidade do trecho o consumo é o de "rodovia boa" (os 70 km/h de carro x 0,8)
+altura_m = 4.0
+largura_m = 2.6
+comprimento_m = 9.0
+peso_bruto_kg = 23000

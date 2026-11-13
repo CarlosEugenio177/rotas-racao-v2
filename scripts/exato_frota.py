@@ -65,24 +65,49 @@ def premissas():
         return {k: float(v) for sec in tomllib.load(f).values() for k, v in sec.items()}
 
 
+MATRIZES = ("matriz_km.csv", "matriz_h.csv", "matriz_l.csv", "matriz_km_eco.csv", "matriz_h_eco.csv", "matriz_l_eco.csv")
+
+
 def carregar(P, pasta=REF):
     ler = lambda nome: np.array([[float(x) for x in l.split(",")] for l in (pasta / nome).read_text().splitlines() if l.strip()])
     ped = list(csv.DictReader(open(pasta / "pedidos.csv", encoding="utf-8")))
-    return montar(P, ler("matriz_km.csv"), ler("matriz_h.csv"), ped)
+    return montar(P, {nome: ler(nome) for nome in MATRIZES if (pasta / nome).exists()}, ped)
 
 
-def montar(P, km, h, ped):
-    """km, h: matrizes com o depósito no índice 0 e o pedido i no índice i; ped: linhas de pedidos.csv."""
-    with np.errstate(divide="ignore", invalid="ignore"):
-        v = np.where(h > 0, km / h, 60.0)
-    L = km * P["consumo_base_l_km"] * (1 + P["consumo_lento_extra"] * np.clip((P["vel_ref_kmh"] - v) / P["vel_ref_kmh"], 0, None))
-    t = h * P["fator_caminhao"]
+def montar(P, mats, ped):
+    """mats: matrizes por nome de arquivo, com o depósito no índice 0 e o pedido i no índice i; ped: linhas de pedidos.csv.
+    Com matriz_l.csv as matrizes são de caminhão (tempo e litros prontos); senão, perfil de carro (tempo x fator, consumo estimado).
+    Com as matrizes _eco há um segundo caminho por par, e cada trecho usa o de menor custo para a carga do momento."""
+    km, h = mats["matriz_km.csv"], mats["matriz_h.csv"]
+    if "matriz_l.csv" in mats:
+        L, t = mats["matriz_l.csv"].copy(), h.copy()
+    else:
+        with np.errstate(divide="ignore", invalid="ignore"):
+            v = np.where(h > 0, km / h, 60.0)
+        L = km * P["consumo_base_l_km"] * (1 + P["consumo_lento_extra"] * np.clip((P["vel_ref_kmh"] - v) / P["vel_ref_kmh"], 0, None))
+        t = h * P["fator_caminhao"]
     np.fill_diagonal(L, 0); np.fill_diagonal(t, 0)
+    eco = None
+    if "matriz_l.csv" in mats and "matriz_l_eco.csv" in mats:
+        eco = {"L": mats["matriz_l_eco.csv"].copy(), "t": mats["matriz_h_eco.csv"].copy()}
+        np.fill_diagonal(eco["L"], 0); np.fill_diagonal(eco["t"], 0)
     dem = [0.0] + [float(p["demanda_t"]) for p in ped]
     dia = [0] + [int(p["dia"]) for p in ped]
-    ativo = [False] + [dem[i] <= P["capacidade_t"] and P["carregar_h"] + t[0, i] + P["descarga_h"] + t[i, 0] <= P["jornada_h"]
-                       for i in range(1, len(dem))]
-    return {"km": km, "h": h, "L": L, "t": t, "ped": ped, "dem": dem, "dia": dia, "ativo": ativo}
+    I = {"mats": mats, "km": km, "h": h, "L": L, "t": t, "eco": eco, "ped": ped, "dem": dem, "dia": dia}
+    I["ativo"] = [False] + [dem[i] <= P["capacidade_t"] and P["carregar_h"] + arco(I, P, 0, i, dem[i])[0] + P["descarga_h"] + arco(I, P, i, 0, 0.0)[0] <= P["jornada_h"]
+                            for i in range(1, len(dem))]
+    return I
+
+
+def arco(I, P, i, j, carga):
+    """Trecho i -> j com `carga` toneladas: (horas, litros). Com dois caminhos, o de menor custo (mesma regra do solver)."""
+    fator = 1 + P["alpha_carga"] * carga / P["capacidade_t"]
+    h1, l1 = I["t"][i, j], I["L"][i, j] * fator
+    if I["eco"] is not None:
+        h2, l2 = I["eco"]["t"][i, j], I["eco"]["L"][i, j] * fator
+        if P["diesel_rs_l"] * l2 + P["motorista_rs_h"] * h2 < P["diesel_rs_l"] * l1 + P["motorista_rs_h"] * h1 - 1e-9:
+            return h2, l2
+    return h1, l1
 
 
 # ---------- avaliação em Python, espelho do avalia_viagem do solver (para conferir os dois lados) ----------
@@ -90,8 +115,9 @@ def avalia_viagem(I, P, v):
     carga = sum(I["dem"][i] for i in v)
     h, litros, prev = P["carregar_h"], 0.0, 0
     for i in list(v) + [0]:
-        h += I["t"][prev, i]
-        litros += I["L"][prev, i] * (1 + P["alpha_carga"] * carga / P["capacidade_t"])
+        dh, dl = arco(I, P, prev, i, carga)
+        h += dh
+        litros += dl
         if i:
             h += P["descarga_h"]; carga -= I["dem"][i]
         prev = i
@@ -144,23 +170,24 @@ def enumerar(I, P, clientes):
         for u in bits:
             cu, rem = clientes[u], m ^ (1 << u)
             if rem == 0:
-                labs = [[preco * L[cu, 0] + rate * (s + t[cu, 0]), s + t[cu, 0], None, None]]
+                ah, al = arco(I, P, cu, 0, 0.0)
+                labs = [[preco * al + rate * (s + ah), s + ah, None, None]]
             else:
-                fator = 1 + alfa * carga[rem] / Q
                 labs = []
                 for v, lv in G[rem].items():
                     cv = clientes[v]
-                    dc, dh = preco * L[cu, cv] * fator + rate * (s + t[cu, cv]), s + t[cu, cv]
+                    ah, al = arco(I, P, cu, cv, carga[rem])
+                    dc, dh = preco * al + rate * (s + ah), s + ah
                     labs += [[dc + l[0], dh + l[1], v, k] for k, l in enumerate(lv) if dh + l[1] <= J]
                 labs = _pareto(labs)
             if labs:
                 Gm[u] = labs
         G[m] = Gm
-        fator = 1 + alfa * carga[m] / Q
         labs = []
         for u, lu in Gm.items():
             cu = clientes[u]
-            dc, dh = preco * L[0, cu] * fator + rate * (c0 + t[0, cu]), c0 + t[0, cu]
+            ah, al = arco(I, P, 0, cu, carga[m])
+            dc, dh = preco * al + rate * (c0 + ah), c0 + ah
             labs += [[dc + l[0], dh + l[1], u, k] for k, l in enumerate(lu) if dh + l[1] <= J + 1e-9]
         if labs:
             viagens[m] = _pareto(labs)
@@ -364,7 +391,7 @@ def heuristica(I, sel, frota_livre=False):
                 p = I["ped"][i - 1]
                 w.writerow([k, p["nome"], p["lat"], p["lon"], p["demanda_t"], p["dia"], p["u"]])
         idx = [0] + sel
-        for nome, M in (("matriz_km.csv", I["km"]), ("matriz_h.csv", I["h"])):
+        for nome, M in I["mats"].items():
             with open(tmp / "dados" / nome, "w") as f:
                 for i in idx:
                     f.write(",".join(f"{M[i, j]:.4f}" for j in idx) + "\n")
@@ -409,11 +436,11 @@ def _uma_semana(args):
     import semanas as sem
     P = premissas()
     fazendas = list(csv.DictReader(open(sem.BASE / "fazendas.csv", encoding="utf-8")))
-    KM, H = np.array(sem.ler_matriz(sem.BASE / "matriz_km.csv")), np.array(sem.ler_matriz(sem.BASE / "matriz_h.csv"))
+    MATS = {nome: np.array(M) for nome, M in sem.carregar_matrizes().items()}
     _, pedidos = sem.sortear(seed, fazendas)
     idx = [0] + [p["faz"] for p in pedidos]
     ped = [{"nome": p["nome"], "lat": p["lat"], "lon": p["lon"], "demanda_t": p["dem"], "dia": p["dia"], "u": p["u"]} for p in pedidos]
-    I = montar(P, KM[np.ix_(idx, idx)], H[np.ix_(idx, idx)], ped)
+    I = montar(P, {nome: M[np.ix_(idx, idx)] for nome, M in MATS.items()}, ped)
     ativos = [i for i in range(1, len(I["dem"])) if I["ativo"][i]]
     ndias = max(I["dia"]) + 1
     por_dia = [[i for i in ativos if I["dia"][i] == d] for d in range(ndias)]
@@ -512,7 +539,8 @@ def main():
 
     # 3) conferência cruzada: os dois métodos exatos numa instância bem pequena (o big-M só prova coisa pequena)
     mini = por_dia[0][:7]
-    e1, e2 = resolver_enum(I, P, [mini]), resolver_milp(I, P, [mini], LIMITE_S)
+    I1 = dict(I, eco=None)   # o modelo big-M só tem um caminho por par: a conferência usa só o caminho mais rápido
+    e1, e2 = resolver_enum(I1, P, [mini]), resolver_milp(I1, P, [mini], LIMITE_S)
     confere = {"pedidos": len(mini), "enumeracao": e1["custo"], "big_m": e2["custo"], "big_m_provado": e2["otimo_provado"],
                "tempo_enumeracao": e1["tempo"], "tempo_big_m": e2["tempo"]}
     print(f"\n3) Conferência dos dois métodos exatos em {len(mini)} pedidos do dia 1: enumeração R$ {e1['custo']:.2f} ({e1['tempo']:.1f}s) x "

@@ -6,7 +6,9 @@ import csv, json, sys, time, urllib.request
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
-OSRM = (sys.argv[1] if len(sys.argv) > 1 else "https://router.project-osrm.org").rstrip("/")
+# Sem argumento: o roteador local de caminhão quando as matrizes são de caminhão (scripts/osrm_local.sh), senão o OSRM público.
+PADRAO = "http://localhost:5001" if (RAIZ / "dados/matriz_l.csv").exists() else "https://router.project-osrm.org"
+OSRM = (sys.argv[1] if len(sys.argv) > 1 else PADRAO).rstrip("/")
 
 def rota(coords):
     url = f"{OSRM}/route/v1/driving/" + ";".join(f"{lo:.5f},{la:.5f}" for la, lo in coords) + "?overview=simplified&geometries=geojson"
@@ -92,9 +94,15 @@ def main():
         if arq_es.exists():
             es = json.load(open(arq_es, encoding="utf-8"))
             prova["semanas"] = {"mesmo_dia": es["mesmo_dia"], "flexivel": es["flexivel"]}
+    # perfil de caminhão: premissas do perfil e comparação com as matrizes antigas de carro
+    import tomllib
+    with open(RAIZ / "dados/premissas.toml", "rb") as f:
+        perfil = tomllib.load(f).get("perfil_caminhao")
+    arq_cmp = RAIZ / "saida/comparacao_caminhao.json"
+    comparacao = json.load(open(arq_cmp, encoding="utf-8")) if arq_cmp.exists() else None
     html = (RAIZ / "scripts/mapa_template.html").read_text(encoding="utf-8")
     html = html.replace("/*DADOS*/null", json.dumps({"res": res, "pontos": pontos, "osrm": OSRM,
-                                                    "exato": sorted(exato, key=lambda l: l["n"]), "diesel": diesel, "semanas": semanas, "pareto": pareto, "prova": prova}, ensure_ascii=False))
+                                                    "exato": sorted(exato, key=lambda l: l["n"]), "diesel": diesel, "semanas": semanas, "pareto": pareto, "prova": prova, "perfil_caminhao": perfil, "comparacao": comparacao}, ensure_ascii=False))
     (RAIZ / "saida/mapa.html").write_text(html, encoding="utf-8")
     print("Mapa salvo em saida/mapa.html")
 

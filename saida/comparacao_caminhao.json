@@ -1,0 +1,48 @@
+{
+ "pares": 3422,
+ "pares_caminho_mudou": 374,
+ "tempo_razao_media": 0.974,
+ "litros_razao_media": 0.97,
+ "consumo_l_km_antes": 0.331,
+ "consumo_l_km_agora": 0.326,
+ "eco_pares_diferentes": 2456,
+ "eco_litros_poupados_medio": 1.53,
+ "eco_minutos_a_mais_medio": 10.4,
+ "custos": [
+  {
+   "nome": "A) Manual: mais perto, tudo no mesmo dia",
+   "antes": 35028.16,
+   "agora": 34350.55
+  },
+  {
+   "nome": "B) Otimizado, tudo no mesmo dia",
+   "antes": 29391.92,
+   "agora": 28245.16
+  },
+  {
+   "nome": "C) Otimizado, 25% aceitam até 2 dias",
+   "antes": 26711.39,
+   "agora": 25490.53
+  },
+  {
+   "nome": "C) Otimizado, 50% aceitam até 2 dias",
+   "antes": 25137.71,
+   "agora": 23973.35
+  },
+  {
+   "nome": "C) Otimizado, 75% aceitam até 2 dias",
+   "antes": 24465.47,
+   "agora": 23171.04
+  },
+  {
+   "nome": "C) Otimizado, 100% aceitam até 2 dias",
+   "antes": 24121.31,
+   "agora": 22905.57
+  },
+  {
+   "nome": "A2) Manual por região, tudo no mesmo dia",
+   "antes": 30634.31,
+   "agora": 29541.7
+  }
+ ]
+}

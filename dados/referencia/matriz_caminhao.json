@@ -1,0 +1,8 @@
+{
+ "pontos": 59,
+ "pares": 3422,
+ "pares_com_caminho_economico_diferente": 2456,
+ "litros_poupados_medio": 1.53,
+ "minutos_a_mais_medio": 10.4,
+ "litros_poupados_max": 16.37
+}

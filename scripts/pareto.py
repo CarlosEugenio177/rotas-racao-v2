@@ -71,13 +71,13 @@ def troca(pl):
             "litros_por_hora": round(dl / dh, 1) if dh > 0 else None}
 
 
-def semana(seed, fazendas, km, h, frota_livre):
+def semana(seed, fazendas, mats, frota_livre):
     _, pedidos = sem.sortear(seed, fazendas)
     pts = []
     for lam in (0.0, 0.5, 1.0):
-        res, erro = sem.rodar_solver(pedidos, km, h, frota_livre, pesos(lam))
+        res, erro = sem.rodar_solver(pedidos, mats, frota_livre, pesos(lam))
         if res is None and "frota estourada" in erro:
-            res, erro = sem.rodar_solver(pedidos, km, h, True, pesos(lam))
+            res, erro = sem.rodar_solver(pedidos, mats, True, pesos(lam))
         if res is None:
             raise RuntimeError(f"semana {seed}, lambda {lam}:\n{erro}")
         b = res["politicas"][1]
@@ -105,9 +105,9 @@ def main():
     if arq_sem.exists():
         sm = json.load(open(arq_sem, encoding="utf-8"))
         fazendas = list(sem.csv.DictReader(open(sem.BASE / "fazendas.csv", encoding="utf-8")))
-        km, h = sem.ler_matriz(sem.BASE / "matriz_km.csv"), sem.ler_matriz(sem.BASE / "matriz_h.csv")
+        mats = sem.carregar_matrizes()
         with ThreadPoolExecutor(max_workers=nt) as ex:
-            ws = list(ex.map(lambda w: semana(w["seed"], fazendas, km, h, w["frota_livre"]), sm["semanas"]))
+            ws = list(ex.map(lambda w: semana(w["seed"], fazendas, mats, w["frota_livre"]), sm["semanas"]))
         est = lambda xs: {"media": round(statistics.mean(xs), 1), "min": round(min(xs), 1), "max": round(max(xs), 1)}
         saida["semanas"] = {"n": len(ws), "horas": est([w["troca"]["horas"] for w in ws]),
                             "litros": est([w["troca"]["litros"] for w in ws]), "rs": est([w["troca"]["rs"] for w in ws]),

@@ -53,9 +53,12 @@ def preparar(P):
     consumo = P["consumo_base_l_km"] * (1 + P["consumo_lento_extra"] * np.clip((P["vel_ref_kmh"] - v) / P["vel_ref_kmh"], 0, None))
     L = km * consumo
     t = h * P["fator_caminhao"]
+    if (RAIZ / "dados/matriz_l.csv").exists():
+        # matrizes de caminhão: tempo e litros já vêm prontos (este modelo usa só o caminho mais rápido de cada par)
+        L, t = ler_matriz("matriz_l.csv"), h.copy()
     np.fill_diagonal(L, 0); np.fill_diagonal(t, 0)
     ped = list(csv.DictReader(open(RAIZ / "dados/pedidos.csv", encoding="utf-8")))
-    return km, h, L, t, ped
+    return km, h, L, t, ped, (ler_matriz("matriz_l.csv") if (RAIZ / "dados/matriz_l.csv").exists() else None)
 
 
 def resolver_exato(idx, dem, L, t, P, relaxado=False):
@@ -141,7 +144,7 @@ def resolver_exato(idx, dem, L, t, P, relaxado=False):
             "limite_inf": (r.fun + const) if relaxado else None}
 
 
-def heuristica(sel, ped, km, h):
+def heuristica(sel, ped, km, h, lit=None):
     """Roda o solver Rust no subconjunto (um dia só, frota livre, sem custo fixo)."""
     tmp = Path(tempfile.mkdtemp())
     (tmp / "dados").mkdir()
@@ -153,7 +156,7 @@ def heuristica(sel, ped, km, h):
             w.writerow([k, p["nome"], p["lat"], p["lon"], p["demanda_t"], 0, 0.99])
     shutil.copy(RAIZ / "dados/premissas.toml", tmp / "dados/premissas.toml")
     idx = [0] + sel
-    for nome, M in (("matriz_km.csv", km), ("matriz_h.csv", h)):
+    for nome, M in (("matriz_km.csv", km), ("matriz_h.csv", h)) + ((("matriz_l.csv", lit),) if lit is not None else ()):
         with open(tmp / "dados" / nome, "w") as f:
             for i in idx:
                 f.write(",".join(f"{M[i, j]:.4f}" for j in idx) + "\n")
@@ -173,7 +176,7 @@ def heuristica(sel, ped, km, h):
 def main():
     tamanhos = [int(x) for x in sys.argv[1:]] or [6, 8, 10, 12, 14, 16]
     P = premissas()
-    km, h, L, t, ped = preparar(P)
+    km, h, L, t, ped, lit = preparar(P)
     # pedidos que cabem numa jornada sozinhos (mesmo critério do solver)
     ok = [i for i in range(1, len(ped) + 1)
           if float(ped[i - 1]["demanda_t"]) <= P["capacidade_t"]
@@ -188,7 +191,7 @@ def main():
         idx = [0] + sel
         ex = resolver_exato(idx, dem, L, t, P)
         lp = resolver_exato(idx, dem, L, t, P, relaxado=True)
-        he = heuristica(sel, ped, km, h)
+        he = heuristica(sel, ped, km, h, lit)
         if ex is None:
             print(f"{n:>7}  sem solução viável em {LIMITE_S}s"); continue
         gap = max(0.0, (he["custo"] / ex["custo"] - 1) * 100) if he["custo"] >= ex["custo"] - 0.01 else (he["custo"] / ex["custo"] - 1) * 100

@@ -85,7 +85,7 @@ code{font-size:12.5px;background:var(--bg);padding:0 4px;border-radius:4px}
 <header>
   <span class="tag" id="tag">Simulação com pedidos fictícios</span>
   <h1>Quanto dá pra economizar nas entregas de ração?</h1>
-  <p>Simulamos semanas de entregas saindo de Teresina para fazendas no interior do Piauí, usando as estradas de verdade (OpenStreetMap). Comparamos o jeito de hoje com rotas planejadas por computador.</p>
+  <p id="p-topo">Simulamos semanas de entregas saindo de Teresina para fazendas no interior do Piauí, usando as estradas de verdade (OpenStreetMap). Comparamos o jeito de hoje com rotas planejadas por computador.</p>
 </header>
 <section class="hero">
   <div>
@@ -182,7 +182,7 @@ code{font-size:12.5px;background:var(--bg);padding:0 4px;border-radius:4px}
 </section>
 <h2>Como a simulação funciona</h2>
 <div class="como">
-  <div><b>1. As estradas</b>Pegamos as distâncias e os tempos de viagem reais entre Teresina e cada fazenda no mapa aberto OpenStreetMap, incluindo trechos de terra.</div>
+  <div id="como-1"><b>1. As estradas</b>Pegamos as distâncias e os tempos de viagem reais entre Teresina e cada fazenda no mapa aberto OpenStreetMap, incluindo trechos de terra.</div>
   <div><b>2. Os custos</b>Cada viagem custa diesel e hora do motorista. O caminhão gasta mais em estrada ruim e quando está cheio. Cada caminhão usado no dia também tem um custo.</div>
   <div><b>3. O planejamento</b>O programa testa milhares de combinações de quem entra em qual caminhão e em que ordem. Tudo respeita o limite de 12 t por caminhão, a jornada do motorista e o prazo de cada cliente.</div>
 </div>
@@ -206,6 +206,12 @@ const FORTE=!REGIAO?"simples":D.semanas?D.semanas.base_forte:(REGIAO.custo<SIMPL
 const HOJE=FORTE==="regiao"?REGIAO:SIMPLES, OUTRA=!REGIAO?null:(FORTE==="regiao"?SIMPLES:REGIAO);
 const NOME_BASE={simples:"indo sempre na fazenda mais perto",regiao:"separando os pedidos por região"};
 const pc=v=>v<10?v.toFixed(1).replace(".",","):String(Math.round(v));
+// rotas de caminhão (roteador local) ou de carro com fator (OSRM público)
+const CAMINHAO=PAR.perfil==="caminhao", PC=D.perfil_caminhao||{}, CMP=D.comparacao, PAR_CONS=0.8;
+if(CAMINHAO){
+  document.getElementById("p-topo").innerHTML="Simulamos semanas de entregas saindo de Teresina para fazendas no interior do Piauí, usando as estradas de verdade (OpenStreetMap), com <b>rotas calculadas para caminhão</b>. Comparamos o jeito de hoje com rotas planejadas por computador.";
+  document.getElementById("como-1").innerHTML="<b>1. As estradas</b>Um roteador próprio calcula, no mapa aberto OpenStreetMap, o caminho de caminhão entre Teresina e cada fazenda: o mais rápido e o que gasta menos diesel, incluindo trechos de terra.";
+}
 const cores=["#2563eb","#dc2626","#16a34a","#9333ea","#ea580c","#0891b2","#be185d","#4d7c0f","#b45309","#4338ca"];
 const brl=v=>"R$ "+Math.round(v).toLocaleString("pt-BR");
 const n0=v=>Math.round(v).toLocaleString("pt-BR");
@@ -438,7 +444,7 @@ if(PV){
       <div class="valor">${okFlex} de ${nFlex} testes</div><div class="delta" style="color:var(--mut);font-weight:500">no melhor plano possível; no pior caso, ${pc(piorFlex)}% acima</div>
       <div style="font-size:12.5px;color:var(--mut);margin-top:8px">Na semana inteira com espera, o plano é bom, mas não há prova de que seja o melhor.</div></div>
     <div class="passo"><div class="n">O que a prova não cobre</div><h3>Vale para esta simulação</h3><p>"Melhor possível" quer dizer: dentro das regras e dos custos desta simulação. Se o consumo real ou os tempos de estrada forem outros, o melhor plano pode mudar.</p>
-      <div style="font-size:12.5px;color:var(--mut);margin-top:8px">Estradas calculadas para carro (tempo aumentado em ${Math.round((PAR.fator_caminhao-1)*100)}%) e consumo estimado. Veja as premissas no fim da página.</div></div>`;
+      <div style="font-size:12.5px;color:var(--mut);margin-top:8px">${CAMINHAO?"Velocidades e consumo do caminhão são estimativas, ainda não calibradas com dados reais.":`Estradas calculadas para carro (tempo aumentado em ${Math.round((PAR.fator_caminhao-1)*100)}%) e consumo estimado.`} Veja as premissas no fim da página.</div></div>`;
   document.getElementById("pv-tab").innerHTML=
     `<tr><th>Dia</th><th>Pedidos</th><th>Melhor plano possível</th><th>Plano do programa</th><th>Diferença</th><th>Caminhões</th></tr>`+
     PV.dias.map((l,i)=>`<tr><td>Dia ${i+1}</td><td>${l.pedidos}</td><td>${brl(l.exato)}</td><td>${brl(l.heuristica)}</td><td class="${zero(l)?"ok":""}">${zero(l)?"igual":"+"+virg(l.gap_pct.toFixed(2))+"%"}</td><td>${l.caminhoes_exato}</td></tr>`).join("")+
@@ -475,13 +481,19 @@ document.getElementById("premissas").innerHTML=[
   `Pedidos e fazendas são fictícios: ${npedidos} entregas em ${D.res.dias} dias, perto de cidades reais do Piauí.`,
   `Frota de ${PAR.frota} caminhões de ${PAR.capacidade_t} t, com jornada máxima de ${PAR.jornada_h} h por dia, sem pernoite.`,
   `Diesel a R$ ${PAR.diesel_rs_l.toFixed(2).replace(".",",")}/L, motorista a R$ ${PAR.motorista_rs_h}/h e R$ ${PAR.caminhao_rs_dia} por caminhão usado no dia.`,
-  `Tempos de viagem calculados para carro e aumentados em ${Math.round((PAR.fator_caminhao-1)*100)}% para caminhão.`,
+  ...(CAMINHAO?[
+    `Rotas calculadas para caminhão num roteador próprio (OSRM com perfil de caminhão sobre o OpenStreetMap). Ele respeita as restrições de altura, largura e peso marcadas no mapa para um veículo de ${String(PC.altura_m).replace(".",",")} m de altura, ${String(PC.largura_m).replace(".",",")} m de largura e ${n0(PC.peso_bruto_kg/1000)} t.`,
+    `Velocidade do caminhão: ${Math.round(PC.fator_vel_caminhao*100)}% da velocidade de carro em cada trecho, com teto de ${PC.vel_max_caminhao_kmh} km/h. É uma estimativa nossa, não uma medição.`,
+    `Consumo de diesel somado trecho a trecho da rota (asfalto rápido gasta menos por km; trecho lento ou de terra gasta até ${Math.round(PAR_CONS*100)}% a mais) e aumentado com a carga. A fórmula é estimada: precisa ser calibrada com o km/L real dos caminhões.`,
+    PAR.caminhos===2?`Para cada par de pontos o programa conhece dois caminhos: o mais rápido e o de menor consumo. Em cada trecho ele usa o que sai mais barato com a carga daquele momento. No plano do mesmo dia da semana do mapa, ${OTIM.trechos_eco} de ${OTIM.trechos} trechos foram pelo caminho de menor consumo. No mapa, o desenho mostra sempre o caminho mais rápido.`:"",
+    CMP?`Antes desta versão as rotas eram de carro, com o tempo aumentado em 25%. Com o perfil de caminhão, ${CMP.pares_caminho_mudou} de ${n0(CMP.pares)} pares de pontos mudaram de caminho, o tempo ficou em média ${Math.round(CMP.tempo_razao_media*100)}% do anterior e o consumo médio do caminhão vazio passou de ${String(CMP.consumo_l_km_antes).replace(".",",")} para ${String(CMP.consumo_l_km_agora).replace(".",",")} L/km.`:"",
+  ]:[`Tempos de viagem calculados para carro e aumentados em ${Math.round((PAR.fator_caminhao-1)*100)}% para caminhão.`]),
   REGIAO?`O "jeito de hoje" é simulado de duas formas (indo sempre no mais perto; separando por região a partir de Teresina). Nenhuma delas são as rotas reais da empresa. A economia é medida contra a mais barata das duas.`:`"Hoje" é uma simulação do jeito comum de rotear (ir no mais perto), não os dados reais da empresa.`,
   SM?`As ${SM.n} semanas simuladas são sorteios entre ${SM.fazendas} fazendas fictícias. As faixas de pedidos por dia (${Object.entries(SM.volumes).map(([k,[a,b]])=>`${k}: ${a} a ${b}`).join("; ")}) foram escolhidas por nós, não medidas.`:"",
   SM&&SM.frota_livre?`Em ${SM.frota_livre} das ${SM.n} semanas simuladas o jeito de hoje não cabe em ${PAR.frota} caminhões em algum dia. Nessas, os dois lados podem usar caminhão extra pelo mesmo custo diário. Isso indica que a frota ou o volume de pedidos da simulação precisam ser conferidos com os números reais.`:"",
   fora.length?`Ficaram de fora ${fora.length} entregas que não cabem numa jornada (precisariam de pernoite): ${fora.join(", ")}.`:"",
   `O custo em reais soma diesel e hora de motorista (R$ ${PAR.motorista_rs_h}/h). Esse valor da hora é uma premissa: é ele que define o plano "equilibrado" entre tempo e diesel.`,
-  `Fonte das rotas: ${D.osrm} (OpenStreetMap).`,
+  `Fonte das rotas: ${CAMINHAO?"roteador OSRM local com perfil de caminhão, mapa do Nordeste da Geofabrik":D.osrm} (OpenStreetMap).`,
 ].filter(Boolean).map(t=>`<li>${t}</li>`).join("");
 </script>
 </body></html>

@@ -20,8 +20,28 @@ dados/premissas.toml      capacidade, jornada, frota, preços e consumo (solver 
 dados/referencia/         cópia congelada dos dados + custos esperados (esperado.json)
 ```
 
+## Rotas de caminhão (roteador local)
+A partir da Fase 5 as matrizes vêm de dois roteadores OSRM **locais** com perfil de caminhão, e não mais do
+servidor público com perfil de carro:
+
+```bash
+scripts/osrm_local.sh                 # baixa o mapa do Nordeste (445 MB), recorta, processa e sobe as portas 5001 e 5002 (~6 min)
+python3 scripts/matriz_caminhao.py    # matrizes de dados/pedidos.csv -> dados/matriz_{km,h,l}[_eco].csv (~20 s)
+python3 scripts/matriz_caminhao.py dados/semanas/fazendas.csv dados/semanas   # as 200 fazendas (~4 min)
+scripts/osrm_local.sh parar
+```
+- `perfis/caminhao.lua` (caminho mais rápido) e `perfis/caminhao_eco.lua` (menor consumo) são gerados por
+  `scripts/perfil_caminhao.py` a partir do `car.lua` do OSRM, com as premissas de `[perfil_caminhao]` em
+  `dados/premissas.toml`: tamanho e peso do veículo, 80% da velocidade do carro em cada trecho, teto de 80 km/h.
+- O tempo já é de caminhão (o fator 1,25 só vale para matrizes de carro, sem `matriz_l.csv`).
+- O consumo é somado trecho a trecho da rota (`matriz_l.csv`, caminhão vazio); o solver aplica o efeito da carga.
+- Com as matrizes `_eco`, cada trecho usa o caminho de menor custo para a carga do momento.
+- `scripts/comparar_matrizes.py` compara com as matrizes antigas de carro, guardadas em `dados/referencia_carro/`
+  e `dados/semanas_carro/`.
+- O `run.sh` continua funcionando com o OSRM público (perfil de carro), mas gera matrizes do modelo antigo.
+
 ## Requisitos
-Python 3 (só biblioteca padrão) e Rust (`cargo`). Para o OSRM local: Docker.
+Python 3 e Rust (`cargo`). Para o OSRM local: Docker. Para os modelos exatos de conferência: scipy.
 
 ## Rodar
 
@@ -60,8 +80,9 @@ hoje, a A2). Na página, a outra aparece só como comparação.
 
 ## Premissas (`dados/premissas.toml`)
 Caminhão de 12 t, jornada de 13 h (sem pernoite), frota de 5 caminhões, diesel a R$ 7,31/L,
-motorista a R$ 30/h, R$ 180 por caminhão usado no dia. O OSRM usa perfil de carro, então o tempo é
-multiplicado por 1,25. O consumo sobe em trechos lentos (terra, serra) e com o caminhão carregado.
+motorista a R$ 30/h, R$ 180 por caminhão usado no dia. Rotas com perfil de caminhão (80% da velocidade
+do carro em cada trecho). O consumo sobe em trechos lentos (terra, serra) e com o caminhão carregado.
+Nenhum desses números foi calibrado com dados reais.
 Pedidos que não cabem numa jornada nem sozinhos (ex.: Parnaíba) ficam de fora e aparecem em aviso.
 
 ## Teste de regressão
