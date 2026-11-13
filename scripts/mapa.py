@@ -33,7 +33,14 @@ def main():
     cache = {tuple(json.loads(k)): g for k, g in todos.get(OSRM, {}).items()}
     total = sum(len(v) for pol in res["politicas"] for v in pol["dias"])
     k = 0
-    for pol in res["politicas"] + ([res["base_regiao"]] if "base_regiao" in res else []):
+    # tempo x combustível (scripts/pareto.py grava saida/pareto.json): os 3 planos com nome também vão para o mapa
+    arq_par = RAIZ / "saida/pareto.json"
+    pareto = json.load(open(arq_par, encoding="utf-8")) if arq_par.exists() else None
+    if pareto and "semanas" in pareto:
+        pareto["semanas"].pop("detalhe", None)
+    planos = list(pareto["planos"].values()) if pareto else []
+    total += sum(len(v) for pol in planos for v in pol["dias"])
+    for pol in res["politicas"] + ([res["base_regiao"]] if "base_regiao" in res else []) + planos:
         for dia in pol["dias"]:
             for v in dia:
                 k += 1
@@ -76,7 +83,7 @@ def main():
                                "eco": eco(w, forte), "eco_outra": eco(w, outra)} for w in sm["semanas"]]
     html = (RAIZ / "scripts/mapa_template.html").read_text(encoding="utf-8")
     html = html.replace("/*DADOS*/null", json.dumps({"res": res, "pontos": pontos, "osrm": OSRM,
-                                                    "exato": sorted(exato, key=lambda l: l["n"]), "diesel": diesel, "semanas": semanas}, ensure_ascii=False))
+                                                    "exato": sorted(exato, key=lambda l: l["n"]), "diesel": diesel, "semanas": semanas, "pareto": pareto}, ensure_ascii=False))
     (RAIZ / "saida/mapa.html").write_text(html, encoding="utf-8")
     print("Mapa salvo em saida/mapa.html")
 

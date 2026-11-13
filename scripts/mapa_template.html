@@ -74,6 +74,7 @@ details ul{margin:10px 0 0;padding-left:18px;color:var(--mut)}
 .ex-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
 .nota-ex{margin:10px 0 0;font-size:13.5px}
 #ex-graf svg{width:100%;height:auto;display:block}
+#pa-graf svg{width:100%;height:auto;display:block}
 #sm-graf svg{width:100%;height:auto;display:block;max-width:760px}
 #sm-graf .bar:hover{opacity:.7}
 code{font-size:12.5px;background:var(--bg);padding:0 4px;border-radius:4px}
@@ -136,6 +137,26 @@ code{font-size:12.5px;background:var(--bg);padding:0 4px;border-radius:4px}
     <div class="viagens" id="viagens"></div>
   </div>
 </div>
+<section id="sec-pareto" hidden>
+<h2>Menos tempo ou menos diesel?</h2>
+<p class="intro-ex">O custo em reais mistura duas coisas: diesel e hora de motorista. Para ver cada uma separada, pedimos ao programa três planos para a mesma semana, todos entregando no mesmo dia: o que gasta <b>menos horas</b>, o que gasta <b>menos diesel</b> e o <b>equilibrado</b>, que é o de menor custo total em reais.</p>
+<div class="destaque" id="pa-msg"></div>
+<div class="passos" id="pa-cards"></div>
+<div class="ex-grid" style="margin-top:14px">
+  <div class="painel">
+    <h4>Todos os planos encontrados: horas de motorista e litros de diesel na semana</h4>
+    <p class="ajuda">Cada ponto é um plano. Quanto mais para baixo e para a esquerda, melhor. Atenção: os eixos estão ampliados e não começam do zero; as diferenças reais são pequenas.</p>
+    <div id="pa-graf"></div>
+    <p class="nota-ex" id="pa-nota"></p>
+  </div>
+  <div class="painel">
+    <h4>Ver cada plano no mapa</h4>
+    <div class="seg" id="pa-seg" style="margin:8px 0"></div>
+    <div id="map2" style="height:380px;border-radius:10px;border:1px solid var(--bd);background:#e7e5e4"></div>
+    <p class="ajuda" id="pa-leg" style="margin:8px 0 0"></p>
+  </div>
+</div>
+</section>
 <section id="sec-exato" hidden>
 <h2>O plano encontrado é o melhor possível?</h2>
 <p class="intro-ex">Aqui não medimos o ganho em reais em relação ao jeito de hoje (isso está no topo da página). Medimos a <b>qualidade</b> do plano: se existe algum outro plano mais barato que o programa deixou passar. Para descobrir, usamos um método matemático que calcula o melhor plano possível e prova que não há outro mais barato. Ele só consegue fazer isso com poucos pedidos de cada vez.</p>
@@ -347,6 +368,65 @@ function render(){
   document.getElementById("viagens").innerHTML=`<h4 style="margin:6px 0">${b.viag} viagens planejadas ${dia<0?"na semana":"no dia "+(dia+1)}</h4>`+(html||'<span style="color:#78716c">Nenhuma viagem neste dia: os pedidos foram agrupados em outros dias.</span>');
 }
 render();
+const PA=D.pareto;
+if(PA){
+  document.getElementById("sec-pareto").hidden=false;
+  const pl=PA.planos, R=pl.rapido, E=pl.economico, Q=pl.equilibrado, t=PA.troca;
+  const h1=v=>v.toFixed(1).replace(".",",");
+  const pctH=(t.horas/E.horas*100), pctL=(t.litros/E.litros*100);
+  const juntos=pctH<3&&pctL<5;
+  document.getElementById("pa-msg").innerHTML=(juntos
+    ?`<b>Tempo e diesel andam quase juntos.</b> O plano mais rápido poupa só ${h1(t.horas)} h de motorista na semana (${h1(pctH)}%) e, para isso, gasta ${n0(t.litros)} L de diesel a mais (${h1(pctL)}%). Não existe um plano muito mais rápido nem um muito mais econômico: quem roda menos gasta menos dos dois.`
+    :`<b>Dá para trocar tempo por diesel.</b> O plano mais rápido poupa ${h1(t.horas)} h de motorista na semana (${h1(pctH)}%), mas gasta ${n0(t.litros)} L de diesel a mais (${h1(pctL)}%).`)+
+    `<small>Em reais: o plano mais rápido sai ${brl(R.custo-Q.custo)} mais caro que o equilibrado; o de menos diesel, ${brl(E.custo-Q.custo)} mais caro.`+
+    (t.horas_por_100l?` Na prática, cada 100 L economizados custam ${h1(t.horas_por_100l)} h a mais de motorista.`:"")+`</small>`;
+  const NOMES={rapido:["Mais rápido","Menos horas de motorista."],equilibrado:["Equilibrado","Menor custo total em reais. É o plano das outras seções."],economico:["Mais econômico","Menos litros de diesel."]};
+  const ordem=["rapido","equilibrado","economico"];
+  document.getElementById("pa-cards").innerHTML=ordem.map(k=>{const p=pl[k];return `
+    <div class="passo"><div class="n">${k==="equilibrado"?"Recomendado":"Extremo"}</div><h3>${NOMES[k][0]}</h3><p style="min-height:40px">${NOMES[k][1]}</p>
+      <div class="valor">${h1(p.horas)} h <span style="font-size:14px;font-weight:500;color:var(--mut)">e</span> ${n0(p.litros)} L</div>
+      <div class="delta" style="color:var(--mut);font-weight:500">${brl(p.custo)} na semana</div>
+      <div style="font-size:12.5px;color:var(--mut);margin-top:8px">${n0(p.km)} km · ${p.viagens} viagens</div></div>`}).join("");
+  // dispersão horas x litros
+  const W=560,H=330,ml=62,mr=24,mt=18,mb=46, pts=PA.pontos;
+  const hs=pts.map(p=>p.horas), ls=pts.map(p=>p.litros);
+  const folga=(a,b)=>Math.max((b-a)*0.18,(a+b)/2*0.004);
+  const x0=Math.min(...hs)-folga(Math.min(...hs),Math.max(...hs)), x1=Math.max(...hs)+folga(Math.min(...hs),Math.max(...hs));
+  const y0=Math.min(...ls)-folga(Math.min(...ls),Math.max(...ls)), y1=Math.max(...ls)+folga(Math.min(...ls),Math.max(...ls));
+  const X=v=>ml+(v-x0)/(x1-x0)*(W-ml-mr), Y=v=>mt+(y1-v)/(y1-y0)*(H-mt-mb);
+  const passo=(a,b,n)=>{const bruto=(b-a)/n,p10=Math.pow(10,Math.floor(Math.log10(bruto)));return [1,2,5,10].map(m=>m*p10).find(s=>s>=bruto)};
+  let g=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Horas e litros de cada plano" style="font:12px system-ui,sans-serif">`;
+  const sx=passo(x0,x1,5), sy=passo(y0,y1,5);
+  for(let v=Math.ceil(x0/sx)*sx;v<=x1;v+=sx)g+=`<line x1="${X(v)}" x2="${X(v)}" y1="${mt}" y2="${H-mb}" stroke="#e7e5e4"/><text x="${X(v)}" y="${H-mb+16}" text-anchor="middle" fill="#78716c">${h1(v)} h</text>`;
+  for(let v=Math.ceil(y0/sy)*sy;v<=y1;v+=sy)g+=`<line x1="${ml}" x2="${W-mr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#e7e5e4"/><text x="${ml-8}" y="${Y(v)+4}" text-anchor="end" fill="#78716c">${n0(v)} L</text>`;
+  g+=`<text x="${(ml+W-mr)/2}" y="${H-6}" text-anchor="middle" fill="#78716c">horas de motorista na semana</text>`;
+  const fr=pts.filter(p=>p.fronteira).sort((a,b)=>a.horas-b.horas);
+  g+=`<polyline points="${fr.map(p=>X(p.horas).toFixed(1)+","+Y(p.litros).toFixed(1)).join(" ")}" fill="none" stroke="#15803d" stroke-width="2" stroke-linejoin="round"/>`;
+  pts.forEach(p=>{g+=`<circle cx="${X(p.horas)}" cy="${Y(p.litros)}" r="${p.fronteira?5:4}" fill="${p.fronteira?"#15803d":"#fff"}" stroke="${p.fronteira?"#fff":"#a8a29e"}" stroke-width="2"><title>${h1(p.horas)} h, ${n0(p.litros)} L, ${brl(p.custo)}${p.fronteira?"":" (existe plano melhor nos dois)"}</title></circle>`});
+  const rot=(p,txt,dx,dy,anc)=>{g+=`<text x="${X(p.horas)+dx}" y="${Y(p.litros)+dy}" text-anchor="${anc}" fill="#1c1917" font-weight="600">${txt}</text>`};
+  rot(R,"mais rápido",10,4,"start"); rot(E,"mais econômico",-10,-10,"end"); if(Q!==E&&Q!==R)rot(Q,"equilibrado",-10,-10,"end");
+  document.getElementById("pa-graf").innerHTML=g+"</svg>";
+  const nDom=pts.filter(p=>!p.fronteira).length;
+  document.getElementById("pa-nota").innerHTML=`Testamos ${PA.lambdas.length} pesos diferentes entre "só diesel" e "só tempo" e saíram ${pts.length} planos distintos.`+(nDom?` Os ${nDom} pontos vazados perdem nos dois quesitos para algum outro plano.`:"")+
+    (PA.semanas?` Nas ${PA.semanas.n} semanas simuladas a troca tem o mesmo tamanho: o plano mais rápido poupa em média ${h1(PA.semanas.horas.media)} h (no máximo ${h1(PA.semanas.horas.max)} h) e gasta ${n0(PA.semanas.litros.media)} L a mais (no máximo ${n0(PA.semanas.litros.max)} L).`:"");
+  // mapa dos três planos
+  const map2=L.map("map2",{scrollWheelZoom:false}).setView([-5.2,-42.3],7);
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Mapa © Esri, HERE, Garmin, © OpenStreetMap"}).addTo(map2);
+  const cam2=L.layerGroup().addTo(map2), seg2=document.getElementById("pa-seg");
+  const mostra=k=>{
+    [...seg2.children].forEach(b=>b.classList.toggle("on",b.dataset.k===k));
+    cam2.clearLayers();const bounds=[];let i=0;
+    pl[k].dias.forEach((vs,d)=>vs.forEach(v=>{const col=cores[i++%cores.length];
+      L.polyline(v.geo,{color:col,weight:3.5,opacity:.85}).bindTooltip(`Dia ${d+1}: ${v.carga} t, ${n0(v.km)} km, ${v.h.toFixed(1)} h, ${n0(v.litros)} L`).addTo(cam2);
+      v.geo.forEach(q=>bounds.push(q));
+      v.pedidos.forEach(j=>{const q=D.pontos[j];L.circleMarker([q.lat,q.lon],{radius:5,color:"#fff",weight:2,fillColor:col,fillOpacity:1}).bindTooltip(q.nome).addTo(cam2)})}));
+    const dep=D.pontos[0];L.circleMarker([dep.lat,dep.lon],{radius:8,color:"#1c1917",weight:3,fillColor:"#facc15",fillOpacity:1}).bindTooltip("Depósito em Teresina").addTo(cam2);
+    if(bounds.length)map2.fitBounds(bounds,{padding:[20,20]});
+    document.getElementById("pa-leg").textContent=`${NOMES[k][0]}: ${h1(pl[k].horas)} h, ${n0(pl[k].litros)} L, ${n0(pl[k].km)} km em ${pl[k].viagens} viagens. Cada cor é uma viagem.`;
+  };
+  ordem.forEach(k=>{const b=document.createElement("button");b.textContent=NOMES[k][0];b.dataset.k=k;b.onclick=()=>mostra(k);seg2.appendChild(b)});
+  mostra("equilibrado");
+}
 const virg=s=>String(s).replace(".",",");
 const seg=v=>(v<0.1?virg(v.toFixed(2)):v<10?virg(v.toFixed(1)):Math.round(v).toLocaleString("pt-BR"))+" s";
 const EX=D.exato||[];
@@ -413,6 +493,7 @@ document.getElementById("premissas").innerHTML=[
   SM?`As ${SM.n} semanas simuladas são sorteios entre ${SM.fazendas} fazendas fictícias. As faixas de pedidos por dia (${Object.entries(SM.volumes).map(([k,[a,b]])=>`${k}: ${a} a ${b}`).join("; ")}) foram escolhidas por nós, não medidas.`:"",
   SM&&SM.frota_livre?`Em ${SM.frota_livre} das ${SM.n} semanas simuladas o jeito de hoje não cabe em ${PAR.frota} caminhões em algum dia. Nessas, os dois lados podem usar caminhão extra pelo mesmo custo diário. Isso indica que a frota ou o volume de pedidos da simulação precisam ser conferidos com os números reais.`:"",
   fora.length?`Ficaram de fora ${fora.length} entregas que não cabem numa jornada (precisariam de pernoite): ${fora.join(", ")}.`:"",
+  `O custo em reais soma diesel e hora de motorista (R$ ${PAR.motorista_rs_h}/h). Esse valor da hora é uma premissa: é ele que define o plano "equilibrado" entre tempo e diesel.`,
   `Fonte das rotas: ${D.osrm} (OpenStreetMap).`,
 ].filter(Boolean).map(t=>`<li>${t}</li>`).join("");
 </script>

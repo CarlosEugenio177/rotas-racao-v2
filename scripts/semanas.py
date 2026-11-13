@@ -47,7 +47,7 @@ def sortear(seed, fazendas):
     return volume, pedidos
 
 
-def rodar_solver(pedidos, km, h, frota_livre):
+def rodar_solver(pedidos, km, h, frota_livre, env_extra=None):
     tmp = Path(tempfile.mkdtemp())
     try:
         (tmp / "dados").mkdir()
@@ -65,6 +65,7 @@ def rodar_solver(pedidos, km, h, frota_livre):
         env = {k: v for k, v in os.environ.items() if k not in ("FROTA", "CAMINHAO_RS_DIA")}
         if frota_livre:
             env["FROTA"] = "99"
+        env.update(env_extra or {})
         r = subprocess.run([str(RAIZ / "solver/target/release/solver"), str(tmp)], env=env, capture_output=True, text=True)
         if r.returncode != 0:
             return None, r.stderr

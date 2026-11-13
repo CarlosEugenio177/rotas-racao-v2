@@ -13,6 +13,7 @@ scripts/mock_osrm.py      OSRM falso para testar sem internet
 scripts/exato.py          modelo exato (programação inteira) x heurística, em instâncias pequenas
 scripts/gerar_fazendas.py  200 fazendas fixas para sortear várias semanas (dados/semanas/)
 scripts/semanas.py        roda as políticas em 20 semanas sorteadas -> saida/semanas.json
+scripts/pareto.py         tempo x diesel: planos mais rápido, mais econômico e equilibrado -> saida/pareto.json
 scripts/regressao.sh      confere se os custos na instância de referência continuam os mesmos
 dados/premissas.toml      capacidade, jornada, frota, preços e consumo (solver e exato.py leem daqui)
 dados/referencia/         cópia congelada dos dados + custos esperados (esperado.json)
@@ -82,6 +83,16 @@ python3 scripts/mapa.py
 ```
 As faixas de pedidos por dia de cada tipo de semana são premissas (topo do `semanas.py`). Quando o jeito de
 hoje não cabe na frota em algum dia, a semana é comparada com frota livre e fica marcada no resultado.
+
+## Tempo x combustível
+O custo em R$ soma diesel e hora de motorista. `scripts/pareto.py` roda a instância de referência com 21 pesos
+entre "só diesel" e "só tempo" (variáveis de ambiente `PESO_DIESEL` e `PESO_TEMPO`, que mudam só a busca; os
+custos do relatório continuam em R$ reais), descarta os planos dominados e nomeia três: mais rápido, mais
+econômico e equilibrado (menor R$). Repete os extremos nas 20 semanas. Grava `saida/pareto.json`.
+
+```bash
+python3 scripts/pareto.py    # ~40 s
+```
 
 ## Modelo exato
 `scripts/exato.py` confere a heurística contra o **ótimo provado** em instâncias pequenas. Ele pega os

@@ -44,6 +44,10 @@ struct Premissas {
     folga_dias: usize,
     deposito_lat: f64,
     deposito_lon: f64,
+    // Pesos da BUSCA (não são premissas de custo): quanto o diesel e o tempo contam na hora de
+    // escolher o plano. 1 e 1 = custo real em R$. Variáveis de ambiente PESO_DIESEL e PESO_TEMPO.
+    peso_diesel: f64,
+    peso_tempo: f64,
 }
 
 static PREM: OnceLock<Premissas> = OnceLock::new();
@@ -90,6 +94,8 @@ fn ler_premissas(raiz: &PathBuf) -> Premissas {
         folga_dias: { let a = pega("folga_dias"); inteiro("folga_dias", a) },
         deposito_lat: pega("deposito_lat"),
         deposito_lon: pega("deposito_lon"),
+        peso_diesel: env("PESO_DIESEL").unwrap_or(1.0),
+        peso_tempo: env("PESO_TEMPO").unwrap_or(1.0),
     };
     assert!(v.is_empty(), "premissas.toml: chave desconhecida: {}", v[0].0);
     pr
@@ -222,7 +228,8 @@ fn avalia_viagem(inst: &Inst, v: &[usize]) -> Av {
         }
         prev = i;
     }
-    a.custo = a.litros * p.diesel_rs_l + a.h * p.motorista_rs_h;
+    // custo usado pela busca; com pesos 1 e 1 é o custo real em R$
+    a.custo = p.peso_diesel * (a.litros * p.diesel_rs_l) + p.peso_tempo * (a.h * p.motorista_rs_h);
     a.ok = carga0 <= p.capacidade_t + 1e-9 && a.h <= p.jornada_h + 1e-9;
     a
 }
@@ -260,6 +267,24 @@ fn custo_dia(inst: &Inst, dia: &[Vec<usize>]) -> f64 {
 type Sol = Vec<Vec<Vec<usize>>>; // dia -> viagens -> pedidos
 
 fn custo(inst: &Inst, s: &Sol) -> f64 { s.iter().map(|d| custo_dia(inst, d)).sum() }
+
+/// Custo real de uma viagem em R$ (diesel + motorista), sem os pesos da busca.
+fn custo_real_viagem(a: &Av) -> f64 { a.litros * p().diesel_rs_l + a.h * p().motorista_rs_h }
+
+/// Custo real do plano em R$: viagens + custo fixo dos caminhões usados. É o que vai para o relatório.
+fn custo_real(inst: &Inst, s: &Sol) -> f64 {
+    s.iter().map(|dia| {
+        let mut c = 0.0;
+        let mut horas = Vec::with_capacity(dia.len());
+        for v in dia {
+            if v.is_empty() { continue; }
+            let a = avalia_viagem(inst, v);
+            c += custo_real_viagem(&a);
+            horas.push(a.h);
+        }
+        c + caminhoes_no_dia(&mut horas) as f64 * p().caminhao_rs_dia
+    }).sum()
+}
 
 // ---------------- Construtivas ----------------
 fn pedidos_do_dia(inst: &Inst, d: usize) -> Vec<usize> {
@@ -356,7 +381,7 @@ fn manual_regiao(inst: &Inst) -> Sol {
 }
 
 fn clarke_wright(inst: &Inst, cli: &[usize]) -> Vec<Vec<usize>> {
-    let c = |i: usize, j: usize| inst.litros_vazio[i][j] * p().diesel_rs_l + inst.h_cam[i][j] * p().motorista_rs_h;
+    let c = |i: usize, j: usize| p().peso_diesel * (inst.litros_vazio[i][j] * p().diesel_rs_l) + p().peso_tempo * (inst.h_cam[i][j] * p().motorista_rs_h);
     let mut sav = vec![];
     for (a, &i) in cli.iter().enumerate() {
         for &j in &cli[a + 1..] {
@@ -638,7 +663,7 @@ struct Res {
 }
 
 fn resume(inst: &Inst, s: &Sol, nome: &str, flex: f64) -> Res {
-    let mut r = Res { nome: nome.into(), flex, custo: custo(inst, s), km: 0.0, litros: 0.0, h: 0.0, viagens: 0,
+    let mut r = Res { nome: nome.into(), flex, custo: custo_real(inst, s), km: 0.0, litros: 0.0, h: 0.0, viagens: 0,
         cam_dia: vec![], mesmo_dia: 0.0, espera_media: 0.0 };
     let (mut n, mut mesmo, mut espera) = (0.0, 0.0, 0.0);
     for (d, dia) in s.iter().enumerate() {
@@ -671,7 +696,7 @@ fn json_sol(inst: &Inst, s: &Sol, r: &Res) -> String {
             if t > 0 { o.push(','); }
             let a = avalia_viagem(inst, v);
             let _ = write!(o, r#"{{"pedidos":{:?},"km":{:.1},"h":{:.2},"litros":{:.1},"carga":{:.1},"custo":{:.2}}}"#,
-                v, a.km, a.h, a.litros, a.carga, a.custo);
+                v, a.km, a.h, a.litros, a.carga, custo_real_viagem(&a));
         }
         o.push(']');
     }
@@ -689,6 +714,9 @@ fn main() {
     println!("{} pedidos em {} dias, frota de {} caminhões ({} t, jornada {} h)", inst.ped.len() - 1, inst.dias, p.frota, p.capacidade_t, p.jornada_h);
     if !fora.is_empty() {
         println!("  {} pedido(s) não cabem numa jornada nem sozinhos (precisam pernoite), fora da comparação: {}", fora.len(), fora.join(", "));
+    }
+    if p.peso_diesel != 1.0 || p.peso_tempo != 1.0 {
+        println!("  busca com pesos: diesel x{}, tempo x{} (os custos mostrados continuam em R$ reais)", p.peso_diesel, p.peso_tempo);
     }
     let t0 = std::time::Instant::now();
 
@@ -753,8 +781,8 @@ fn main() {
     js.push_str("],\"base_regiao\":");
     define_janelas(&mut inst, 0.0);
     js.push_str(&json_sol(&inst, &a2, &ra2));
-    let _ = write!(js, r#","parametros":{{"capacidade_t":{},"jornada_h":{},"frota":{},"folga_dias":{},"diesel_rs_l":{},"motorista_rs_h":{},"caminhao_rs_dia":{},"fator_caminhao":{}}},"fora":{:?},"dias":{}}}"#,
-        p.capacidade_t, p.jornada_h, p.frota, p.folga_dias, p.diesel_rs_l, p.motorista_rs_h, p.caminhao_rs_dia, p.fator_caminhao,
+    let _ = write!(js, r#","parametros":{{"capacidade_t":{},"jornada_h":{},"frota":{},"folga_dias":{},"diesel_rs_l":{},"motorista_rs_h":{},"caminhao_rs_dia":{},"fator_caminhao":{},"peso_diesel":{},"peso_tempo":{}}},"fora":{:?},"dias":{}}}"#,
+        p.capacidade_t, p.jornada_h, p.frota, p.folga_dias, p.diesel_rs_l, p.motorista_rs_h, p.caminhao_rs_dia, p.fator_caminhao, p.peso_diesel, p.peso_tempo,
         (1..inst.ped.len()).filter(|&i| !inst.ativo[i]).collect::<Vec<_>>(), inst.dias);
     fs::create_dir_all(raiz.join("saida")).unwrap();
     fs::write(raiz.join("saida/resultado.json"), js).unwrap();
