@@ -10,6 +10,10 @@ scripts/osrm_matriz.py    matriz real de km e tempo entre depósito e fazendas (
 solver/                   otimizador em Rust (sem dependências)
 scripts/mapa.py           geometria real das viagens (OSRM /route) + saida/mapa.html (Leaflet)
 scripts/mock_osrm.py      OSRM falso para testar sem internet
+scripts/exato.py          modelo exato (programação inteira) x heurística, em instâncias pequenas
+scripts/regressao.sh      confere se os custos na instância de referência continuam os mesmos
+dados/premissas.toml      capacidade, jornada, frota, preços e consumo (solver e exato.py leem daqui)
+dados/referencia/         cópia congelada dos dados + custos esperados (esperado.json)
 ```
 
 ## Requisitos
@@ -46,11 +50,18 @@ cd .. && ./run.sh http://localhost:5000
 
 A curva C mostra **quanto custa a meta de entregar no mesmo dia**.
 
-## Premissas (topo de `solver/src/main.rs`)
+## Premissas (`dados/premissas.toml`)
 Caminhão de 12 t, jornada de 13 h (sem pernoite), frota de 5 caminhões, diesel a R$ 7,31/L,
 motorista a R$ 30/h, R$ 180 por caminhão usado no dia. O OSRM usa perfil de carro, então o tempo é
 multiplicado por 1,25. O consumo sobe em trechos lentos (terra, serra) e com o caminhão carregado.
 Pedidos que não cabem numa jornada nem sozinhos (ex.: Parnaíba) ficam de fora e aparecem em aviso.
+
+## Teste de regressão
+```bash
+scripts/regressao.sh               # roda o solver em dados/referencia/ e compara com esperado.json (tolerância R$ 0,01)
+scripts/regressao.sh --atualizar   # só quando o modelo de custo mudou de propósito; explique no commit
+```
+O `run.sh` sorteia pedidos novos em `dados/pedidos.csv`; a instância de `dados/referencia/` não muda.
 
 ## Modelo exato
 `scripts/exato.py` confere a heurística contra o **ótimo provado** em instâncias pequenas. Ele pega os
@@ -58,7 +69,7 @@ primeiros N pedidos de `dados/` (só os que cabem numa jornada), monta o roteame
 programação linear inteira (fluxo de carga + tempo acumulado, consumo crescendo com a carga) e resolve com o
 HiGHS (`scipy.optimize.milp`, limite de 300 s por instância). Para isolar o roteamento, frota livre e sem
 custo fixo por caminhão: o solver Rust roda no mesmo subconjunto com `FROTA=999 CAMINHAO_RS_DIA=0`
-(variáveis de ambiente que sobrescrevem as premissas). A tabela mostra o custo exato, o da heurística,
+(variáveis de ambiente que sobrescrevem `dados/premissas.toml`). A tabela mostra o custo exato, o da heurística,
 o gap entre os dois e o limite inferior da relaxação linear; detalhes em `saida/exato.json`.
 
 ```bash

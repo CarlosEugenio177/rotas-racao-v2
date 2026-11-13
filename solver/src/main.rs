@@ -3,11 +3,12 @@
 //! Entrada (gerada pelos scripts Python):
 //!   dados/pedidos.csv   id,nome,lat,lon,demanda_t,dia,u
 //!   dados/matriz_km.csv / dados/matriz_h.csv   (OSRM real; ponto 0 = depósito, i = pedido i)
+//!   dados/premissas.toml   capacidade, jornada, frota, preços e consumo
 //!
 //! Modelo:
 //!   - Horizonte de DIAS dias. Cada pedido chega num dia e tem uma janela [dia, dia+folga].
 //!     Folga 0 = "tem que sair no mesmo dia".
-//!   - Frota de FROTA caminhões/dia. Cada caminhão faz várias viagens no dia, desde que a soma
+//!   - Frota limitada de caminhões/dia. Cada caminhão faz várias viagens no dia, desde que a soma
 //!     caiba na jornada (empacotamento First-Fit Decreasing das viagens nos caminhões).
 //!   - Custo = diesel (depende da velocidade média do trecho e da carga) + hora motorista
 //!     + custo fixo por caminhão usado no dia.
@@ -15,37 +16,80 @@
 //! Políticas comparadas:
 //!   A) Manual: tudo no dia do pedido, rota "vai no mais perto" (o que se faz hoje)
 //!   B) Otimizado, tudo no mesmo dia
-//!   C) Otimizado com X% dos pedidos aceitando até FOLGA_DIAS de espera (curva 0..100%)
+//!   C) Otimizado com X% dos pedidos aceitando até folga_dias de espera (curva 0..100%)
 
 use std::fmt::Write as _;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
-// ---------------- Premissas (ajuste com os dados do primo) ----------------
-const CAPACIDADE_T: f64 = 12.0;
-const JORNADA_H: f64 = 13.0; // por caminhão por dia (sem pernoite)
-const DESCARGA_H: f64 = 0.5; // por parada
-const CARREGAR_H: f64 = 0.75; // carregar no depósito, por viagem
-const FATOR_CAMINHAO: f64 = 1.25; // OSRM perfil carro -> caminhão é ~25% mais lento
-const DIESEL_RS_L: f64 = 7.31;
-const MOTORISTA_RS_H: f64 = 30.0;
-const CAMINHAO_RS_DIA_PADRAO: f64 = 180.0; // depreciação/manutenção por caminhão usado no dia
-const CONSUMO_BASE_L_KM: f64 = 0.30; // caminhão vazio em rodovia boa
-const ALPHA_CARGA: f64 = 0.35; // +35% consumo totalmente carregado
-const FROTA_PADRAO: usize = 5;
-
-/// Custo fixo por caminhão/dia; pode ser sobrescrito pela variável de ambiente CAMINHAO_RS_DIA.
-fn caminhao_rs_dia() -> f64 {
-    static V: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
-    *V.get_or_init(|| std::env::var("CAMINHAO_RS_DIA").ok().and_then(|s| s.parse().ok()).unwrap_or(CAMINHAO_RS_DIA_PADRAO))
+// ---------------- Premissas ----------------
+// Vêm de dados/premissas.toml (o mesmo arquivo que o scripts/exato.py lê). Aqui só ficam
+// os parâmetros do algoritmo, que não mudam o modelo de custo.
+struct Premissas {
+    capacidade_t: f64,
+    jornada_h: f64,
+    descarga_h: f64,
+    carregar_h: f64,
+    fator_caminhao: f64,
+    diesel_rs_l: f64,
+    motorista_rs_h: f64,
+    caminhao_rs_dia: f64,
+    consumo_base_l_km: f64,
+    alpha_carga: f64,
+    consumo_lento_extra: f64,
+    vel_ref_kmh: f64,
+    frota: usize,
+    folga_dias: usize,
 }
 
-/// Tamanho da frota; pode ser sobrescrito pela variável de ambiente FROTA.
-fn frota() -> usize {
-    static V: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
-    *V.get_or_init(|| std::env::var("FROTA").ok().and_then(|s| s.parse().ok()).unwrap_or(FROTA_PADRAO))
+static PREM: OnceLock<Premissas> = OnceLock::new();
+
+fn p() -> &'static Premissas { PREM.get().expect("premissas não carregadas") }
+
+/// Lê dados/premissas.toml: linhas `chave = número`, com `# comentário` e `[seção]` ignorados.
+/// Chave faltando ou desconhecida é erro (nada de valor padrão escondido no código).
+/// As variáveis de ambiente CAMINHAO_RS_DIA e FROTA sobrescrevem o arquivo (usado pelo exato.py).
+fn ler_premissas(raiz: &PathBuf) -> Premissas {
+    let arq = raiz.join("dados/premissas.toml");
+    let txt = fs::read_to_string(&arq).unwrap_or_else(|_| panic!("não achei {:?}", arq));
+    let mut v: Vec<(String, f64)> = vec![];
+    for l in txt.lines() {
+        let l = l.split('#').next().unwrap().trim();
+        if l.is_empty() || l.starts_with('[') { continue; }
+        let (k, x) = l.split_once('=').unwrap_or_else(|| panic!("premissas.toml: linha inválida: {l}"));
+        let x: f64 = x.trim().parse().unwrap_or_else(|_| panic!("premissas.toml: valor inválido em: {l}"));
+        v.push((k.trim().to_string(), x));
+    }
+    let mut pega = |k: &str| -> f64 {
+        let i = v.iter().position(|(c, _)| c == k).unwrap_or_else(|| panic!("premissas.toml: falta a chave {k}"));
+        v.remove(i).1
+    };
+    let inteiro = |k: &str, x: f64| -> usize {
+        assert!(x >= 0.0 && x.fract() == 0.0, "premissas: {k} tem que ser inteiro, veio {x}");
+        x as usize
+    };
+    let env = |k: &str| std::env::var(k).ok().map(|s| s.parse::<f64>().unwrap_or_else(|_| panic!("variável {k} inválida: {s}")));
+    let pr = Premissas {
+        capacidade_t: pega("capacidade_t"),
+        jornada_h: pega("jornada_h"),
+        descarga_h: pega("descarga_h"),
+        carregar_h: pega("carregar_h"),
+        fator_caminhao: pega("fator_caminhao"),
+        diesel_rs_l: pega("diesel_rs_l"),
+        motorista_rs_h: pega("motorista_rs_h"),
+        caminhao_rs_dia: { let a = pega("caminhao_rs_dia"); env("CAMINHAO_RS_DIA").unwrap_or(a) },
+        consumo_base_l_km: pega("consumo_base_l_km"),
+        alpha_carga: pega("alpha_carga"),
+        consumo_lento_extra: pega("consumo_lento_extra"),
+        vel_ref_kmh: pega("vel_ref_kmh"),
+        frota: { let a = pega("frota"); inteiro("frota", env("FROTA").unwrap_or(a)) },
+        folga_dias: { let a = pega("folga_dias"); inteiro("folga_dias", a) },
+    };
+    assert!(v.is_empty(), "premissas.toml: chave desconhecida: {}", v[0].0);
+    pr
 }
-const FOLGA_DIAS: usize = 2;
+
 const ILS_ITERS: usize = 300;
 const PENALIDADE: f64 = 50_000.0;
 
@@ -91,7 +135,8 @@ struct Inst {
 
 fn consumo_l_km(vel_kmh: f64) -> f64 {
     // estrada lenta (terra, serra, cidade) gasta mais por km
-    CONSUMO_BASE_L_KM * (1.0 + 0.8 * ((70.0 - vel_kmh) / 70.0).max(0.0))
+    let p = p();
+    p.consumo_base_l_km * (1.0 + p.consumo_lento_extra * ((p.vel_ref_kmh - vel_kmh) / p.vel_ref_kmh).max(0.0))
 }
 
 fn carregar(raiz: &PathBuf) -> Inst {
@@ -117,7 +162,7 @@ fn carregar(raiz: &PathBuf) -> Inst {
             if i == j { continue; }
             let v = if h[i][j] > 0.0 { km[i][j] / h[i][j] } else { 60.0 };
             litros[i][j] = km[i][j] * consumo_l_km(v);
-            hc[i][j] = h[i][j] * FATOR_CAMINHAO;
+            hc[i][j] = h[i][j] * p().fator_caminhao;
         }
     }
     let dias = ped.iter().map(|p| p.dia).max().unwrap() + 1;
@@ -125,7 +170,7 @@ fn carregar(raiz: &PathBuf) -> Inst {
     inst.ativo[0] = false;
     for i in 1..n {
         let a = avalia_viagem(&inst, &[i]);
-        if a.h > JORNADA_H || inst.ped[i].demanda > CAPACIDADE_T {
+        if a.h > p().jornada_h || inst.ped[i].demanda > p().capacidade_t {
             inst.ativo[i] = false;
         }
     }
@@ -135,7 +180,7 @@ fn carregar(raiz: &PathBuf) -> Inst {
 fn define_janelas(inst: &mut Inst, frac_flex: f64) {
     for i in 1..inst.ped.len() {
         let d = inst.ped[i].dia;
-        let folga = if inst.ped[i].u < frac_flex { FOLGA_DIAS } else { 0 };
+        let folga = if inst.ped[i].u < frac_flex { p().folga_dias } else { 0 };
         inst.janela[i] = (d, (d + folga).min(inst.dias - 1));
     }
 }
@@ -153,31 +198,33 @@ struct Av {
 
 fn avalia_viagem(inst: &Inst, v: &[usize]) -> Av {
     if v.is_empty() { return Av { ok: true, ..Default::default() }; }
+    let p = p();
     let carga0: f64 = v.iter().map(|&i| inst.ped[i].demanda).sum();
-    let mut a = Av { carga: carga0, h: CARREGAR_H, ..Default::default() };
+    let mut a = Av { carga: carga0, h: p.carregar_h, ..Default::default() };
     let mut carga = carga0;
     let mut prev = 0;
     for &i in v.iter().chain(std::iter::once(&0)) {
         a.km += inst.km[prev][i];
         a.h += inst.h_cam[prev][i];
-        a.litros += inst.litros_vazio[prev][i] * (1.0 + ALPHA_CARGA * carga / CAPACIDADE_T);
+        a.litros += inst.litros_vazio[prev][i] * (1.0 + p.alpha_carga * carga / p.capacidade_t);
         if i != 0 {
-            a.h += DESCARGA_H;
+            a.h += p.descarga_h;
             carga -= inst.ped[i].demanda;
         }
         prev = i;
     }
-    a.custo = a.litros * DIESEL_RS_L + a.h * MOTORISTA_RS_H;
-    a.ok = carga0 <= CAPACIDADE_T + 1e-9 && a.h <= JORNADA_H + 1e-9;
+    a.custo = a.litros * p.diesel_rs_l + a.h * p.motorista_rs_h;
+    a.ok = carga0 <= p.capacidade_t + 1e-9 && a.h <= p.jornada_h + 1e-9;
     a
 }
 
 /// Empacota as viagens do dia nos caminhões (FFD). Devolve nº de caminhões.
 fn caminhoes_no_dia(horas: &mut Vec<f64>) -> usize {
+    let jornada = p().jornada_h;
     horas.sort_by(|a, b| b.partial_cmp(a).unwrap());
     let mut bins: Vec<f64> = vec![];
     for &h in horas.iter() {
-        match bins.iter_mut().find(|b| **b + h <= JORNADA_H + 1e-9) {
+        match bins.iter_mut().find(|b| **b + h <= jornada + 1e-9) {
             Some(b) => *b += h,
             None => bins.push(h),
         }
@@ -196,8 +243,8 @@ fn custo_dia(inst: &Inst, dia: &[Vec<usize>]) -> f64 {
         horas.push(a.h);
     }
     let k = caminhoes_no_dia(&mut horas);
-    c += k as f64 * caminhao_rs_dia();
-    if k > frota() { c += PENALIDADE * (k - frota()) as f64; }
+    c += k as f64 * p().caminhao_rs_dia;
+    if k > p().frota { c += PENALIDADE * (k - p().frota) as f64; }
     c
 }
 
@@ -240,7 +287,7 @@ fn manual(inst: &Inst) -> Sol {
 }
 
 fn clarke_wright(inst: &Inst, cli: &[usize]) -> Vec<Vec<usize>> {
-    let c = |i: usize, j: usize| inst.litros_vazio[i][j] * DIESEL_RS_L + inst.h_cam[i][j] * MOTORISTA_RS_H;
+    let c = |i: usize, j: usize| inst.litros_vazio[i][j] * p().diesel_rs_l + inst.h_cam[i][j] * p().motorista_rs_h;
     let mut sav = vec![];
     for (a, &i) in cli.iter().enumerate() {
         for &j in &cli[a + 1..] {
@@ -295,8 +342,8 @@ fn custo_dia_avs<'a>(avs: impl Iterator<Item = &'a Av>) -> f64 {
         horas.push(a.h);
     }
     let k = caminhoes_no_dia(&mut horas);
-    c += k as f64 * caminhao_rs_dia();
-    if k > frota() { c += PENALIDADE * (k - frota()) as f64; }
+    c += k as f64 * p().caminhao_rs_dia;
+    if k > p().frota { c += PENALIDADE * (k - p().frota) as f64; }
     c
 }
 
@@ -500,7 +547,7 @@ fn valida(inst: &Inst, s: &Sol, nome: &str) {
                 assert!(j0 <= d && d <= j1, "{nome}: pedido {x} fora da janela");
             }
         }
-        assert!(caminhoes_no_dia(&mut horas) <= frota(), "{nome}: frota estourada no dia {d}");
+        assert!(caminhoes_no_dia(&mut horas) <= p().frota, "{nome}: frota estourada no dia {d}");
     }
     for i in 1..inst.ped.len() {
         assert_eq!(visto[i], if inst.ativo[i] { 1 } else { 0 }, "{nome}: pedido {i} entregue {} vezes", visto[i]);
@@ -565,10 +612,12 @@ fn json_sol(inst: &Inst, s: &Sol, r: &Res) -> String {
 
 fn main() {
     let raiz = PathBuf::from(std::env::args().nth(1).unwrap_or_else(|| "..".into()));
+    PREM.set(ler_premissas(&raiz)).ok();
+    let p = p();
     let mut inst = carregar(&raiz);
     let n_ativos = inst.ativo.iter().filter(|&&a| a).count();
     let fora: Vec<&str> = (1..inst.ped.len()).filter(|&i| !inst.ativo[i]).map(|i| inst.ped[i].nome.as_str()).collect();
-    println!("{} pedidos em {} dias, frota de {} caminhões ({} t, jornada {} h)", inst.ped.len() - 1, inst.dias, frota(), CAPACIDADE_T, JORNADA_H);
+    println!("{} pedidos em {} dias, frota de {} caminhões ({} t, jornada {} h)", inst.ped.len() - 1, inst.dias, p.frota, p.capacidade_t, p.jornada_h);
     if !fora.is_empty() {
         println!("  {} pedido(s) não cabem numa jornada nem sozinhos (precisam pernoite), fora da comparação: {}", fora.len(), fora.join(", "));
     }
@@ -588,7 +637,7 @@ fn main() {
         define_janelas(&mut inst, f);
         let s = otimiza(&inst, Some(b.clone()), 10 + k as u64);
         valida(&inst, &s, "C");
-        let nome = format!("C) Otimizado, {:.0}% aceitam até {} dias", f * 100.0, FOLGA_DIAS);
+        let nome = format!("C) Otimizado, {:.0}% aceitam até {} dias", f * 100.0, p.folga_dias);
         curva.push(resume(&inst, &s, &nome, f));
         sols.push(s);
     }
@@ -629,8 +678,9 @@ fn main() {
         js.push(',');
         js.push_str(&json_sol(&inst, s, &curva[k]));
     }
-    let _ = write!(js, r#"],"parametros":{{"capacidade_t":{CAPACIDADE_T},"jornada_h":{JORNADA_H},"frota":{},"folga_dias":{FOLGA_DIAS},"diesel_rs_l":{DIESEL_RS_L},"motorista_rs_h":{MOTORISTA_RS_H},"caminhao_rs_dia":{},"fator_caminhao":{FATOR_CAMINHAO}}},"fora":{:?},"dias":{}}}"#,
-        frota(), caminhao_rs_dia(), (1..inst.ped.len()).filter(|&i| !inst.ativo[i]).collect::<Vec<_>>(), inst.dias);
+    let _ = write!(js, r#"],"parametros":{{"capacidade_t":{},"jornada_h":{},"frota":{},"folga_dias":{},"diesel_rs_l":{},"motorista_rs_h":{},"caminhao_rs_dia":{},"fator_caminhao":{}}},"fora":{:?},"dias":{}}}"#,
+        p.capacidade_t, p.jornada_h, p.frota, p.folga_dias, p.diesel_rs_l, p.motorista_rs_h, p.caminhao_rs_dia, p.fator_caminhao,
+        (1..inst.ped.len()).filter(|&i| !inst.ativo[i]).collect::<Vec<_>>(), inst.dias);
     fs::create_dir_all(raiz.join("saida")).unwrap();
     fs::write(raiz.join("saida/resultado.json"), js).unwrap();
     println!("\nSoluções salvas em saida/resultado.json");

@@ -22,9 +22,9 @@ Modelo (um dia, frota livre, sem custo fixo por caminhão, para isolar o roteame
     T_i + descarga + t_i0 ≤ jornada + M(1 − x_i0)
 
 Uso: python3 scripts/exato.py [tamanhos...]   ex.: python3 scripts/exato.py 6 8 10 12
-Requer: scipy (pip install scipy). Premissas lidas de solver/src/main.rs.
+Requer: scipy (pip install scipy). Premissas lidas de dados/premissas.toml (o mesmo arquivo do solver).
 """
-import csv, json, os, re, shutil, subprocess, sys, tempfile, time
+import csv, json, os, shutil, subprocess, sys, tempfile, time, tomllib
 from pathlib import Path
 
 import numpy as np
@@ -36,9 +36,10 @@ LIMITE_S = 300  # tempo máximo por instância no solver exato
 
 
 def premissas():
-    src = (RAIZ / "solver/src/main.rs").read_text(encoding="utf-8")
-    p = {k: float(v) for k, v in re.findall(r"const (\w+): f64 = ([\d.]+);", src)}
-    return p
+    """dados/premissas.toml, com as seções achatadas num dicionário só: {"diesel_rs_l": 7.31, ...}."""
+    with open(RAIZ / "dados/premissas.toml", "rb") as f:
+        secoes = tomllib.load(f)
+    return {k: float(v) for sec in secoes.values() for k, v in sec.items()}
 
 
 def ler_matriz(nome):
@@ -49,9 +50,9 @@ def preparar(P):
     km, h = ler_matriz("matriz_km.csv"), ler_matriz("matriz_h.csv")
     with np.errstate(divide="ignore", invalid="ignore"):
         v = np.where(h > 0, km / h, 60.0)
-    consumo = P["CONSUMO_BASE_L_KM"] * (1 + 0.8 * np.clip((70 - v) / 70, 0, None))
+    consumo = P["consumo_base_l_km"] * (1 + P["consumo_lento_extra"] * np.clip((P["vel_ref_kmh"] - v) / P["vel_ref_kmh"], 0, None))
     L = km * consumo
-    t = h * P["FATOR_CAMINHAO"]
+    t = h * P["fator_caminhao"]
     np.fill_diagonal(L, 0); np.fill_diagonal(t, 0)
     ped = list(csv.DictReader(open(RAIZ / "dados/pedidos.csv", encoding="utf-8")))
     return km, h, L, t, ped
@@ -61,9 +62,9 @@ def resolver_exato(idx, dem, L, t, P, relaxado=False):
     """idx: índices dos pontos na matriz global (0 = depósito primeiro)."""
     n = len(idx) - 1
     N = n + 1
-    Q, a = P["CAPACIDADE_T"], P["ALPHA_CARGA"]
-    s, c0, J = P["DESCARGA_H"], P["CARREGAR_H"], P["JORNADA_H"]
-    preco, rate = P["DIESEL_RS_L"], P["MOTORISTA_RS_H"]
+    Q, a = P["capacidade_t"], P["alpha_carga"]
+    s, c0, J = P["descarga_h"], P["carregar_h"], P["jornada_h"]
+    preco, rate = P["diesel_rs_l"], P["motorista_rs_h"]
     Ls = L[np.ix_(idx, idx)]
     ts = t[np.ix_(idx, idx)]
     arcos = [(i, j) for i in range(N) for j in range(N) if i != j]
@@ -150,6 +151,7 @@ def heuristica(sel, ped, km, h):
         for k, i in enumerate(sel, 1):
             p = ped[i - 1]
             w.writerow([k, p["nome"], p["lat"], p["lon"], p["demanda_t"], 0, 0.99])
+    shutil.copy(RAIZ / "dados/premissas.toml", tmp / "dados/premissas.toml")
     idx = [0] + sel
     for nome, M in (("matriz_km.csv", km), ("matriz_h.csv", h)):
         with open(tmp / "dados" / nome, "w") as f:
@@ -174,9 +176,9 @@ def main():
     km, h, L, t, ped = preparar(P)
     # pedidos que cabem numa jornada sozinhos (mesmo critério do solver)
     ok = [i for i in range(1, len(ped) + 1)
-          if float(ped[i - 1]["demanda_t"]) <= P["CAPACIDADE_T"]
-          and P["CARREGAR_H"] + t[0, i] + P["DESCARGA_H"] + t[i, 0] <= P["JORNADA_H"]]
-    print(f"Diesel R$ {P['DIESEL_RS_L']:.2f}/L · caminhão {P['CAPACIDADE_T']:.0f} t · jornada {P['JORNADA_H']:.0f} h · limite {LIMITE_S}s por instância\n")
+          if float(ped[i - 1]["demanda_t"]) <= P["capacidade_t"]
+          and P["carregar_h"] + t[0, i] + P["descarga_h"] + t[i, 0] <= P["jornada_h"]]
+    print(f"Diesel R$ {P['diesel_rs_l']:.2f}/L · caminhão {P['capacidade_t']:.0f} t · jornada {P['jornada_h']:.0f} h · limite {LIMITE_S}s por instância\n")
     cab = f"{'pedidos':>7} {'binárias':>8} {'restr.':>7} │ {'ótimo exato':>12} {'tempo':>8} │ {'heurística':>11} {'tempo':>7} {'gap':>7} │ {'relax. LP':>10}"
     print(cab); print("─" * len(cab))
     linhas = []

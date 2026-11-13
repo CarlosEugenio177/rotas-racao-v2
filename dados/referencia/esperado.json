@@ -1,0 +1,26 @@
+[
+ {
+  "nome": "A) Manual: mais perto, tudo no mesmo dia",
+  "custo": 35028.16
+ },
+ {
+  "nome": "B) Otimizado, tudo no mesmo dia",
+  "custo": 29391.92
+ },
+ {
+  "nome": "C) Otimizado, 25% aceitam até 2 dias",
+  "custo": 26749.52
+ },
+ {
+  "nome": "C) Otimizado, 50% aceitam até 2 dias",
+  "custo": 25594.73
+ },
+ {
+  "nome": "C) Otimizado, 75% aceitam até 2 dias",
+  "custo": 24658.92
+ },
+ {
+  "nome": "C) Otimizado, 100% aceitam até 2 dias",
+  "custo": 24240.23
+ }
+]

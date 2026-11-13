@@ -1,0 +1,28 @@
+# Premissas da simulação. Lido pelo solver (solver/src/main.rs) e pelo scripts/exato.py.
+# Nenhum destes números foi calibrado com dados reais: são estimativas até a Fase 7.
+# Mudou algum valor? Rode scripts/regressao.sh: ele vai acusar a diferença, e aí
+# atualize os valores esperados de propósito (scripts/regressao.sh --atualizar).
+
+[caminhao]
+capacidade_t = 12.0        # toneladas por caminhão
+frota = 5                  # caminhões disponíveis por dia
+caminhao_rs_dia = 180.0    # depreciação/manutenção por caminhão usado no dia
+
+[jornada]
+jornada_h = 13.0           # horas por caminhão por dia (sem pernoite)
+descarga_h = 0.5           # por parada
+carregar_h = 0.75          # carregar no depósito, por viagem
+fator_caminhao = 1.25      # OSRM usa perfil de carro; caminhão ~25% mais lento
+
+[custos]
+diesel_rs_l = 7.31
+motorista_rs_h = 30.0
+
+[consumo]
+consumo_base_l_km = 0.30   # caminhão vazio em rodovia boa
+alpha_carga = 0.35         # +35% de consumo com o caminhão totalmente carregado
+consumo_lento_extra = 0.8  # até +80% de consumo por km em trecho lento (terra, serra, cidade)
+vel_ref_kmh = 70.0         # velocidade média (de carro) a partir da qual o trecho conta como "rodovia boa"
+
+[prazo]
+folga_dias = 2             # quantos dias um cliente flexível aceita esperar
