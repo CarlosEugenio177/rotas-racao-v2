@@ -14,6 +14,7 @@ scripts/exato.py          modelo exato (programação inteira) x heurística, em
 scripts/gerar_fazendas.py  200 fazendas fixas para sortear várias semanas (dados/semanas/)
 scripts/semanas.py        roda as políticas em 20 semanas sorteadas -> saida/semanas.json
 scripts/pareto.py         tempo x diesel: planos mais rápido, mais econômico e equilibrado -> saida/pareto.json
+scripts/exato_frota.py    ótimo provado com frota e custo por caminhão x solver -> saida/exato_frota.json
 scripts/regressao.sh      confere se os custos na instância de referência continuam os mesmos
 dados/premissas.toml      capacidade, jornada, frota, preços e consumo (solver e exato.py leem daqui)
 dados/referencia/         cópia congelada dos dados + custos esperados (esperado.json)
@@ -49,7 +50,7 @@ cd .. && ./run.sh http://localhost:5000
 |---|---|
 | A) Manual | tudo entregue no dia do pedido, sempre indo no cliente mais perto (o jeito de hoje) |
 | A2) Manual por região | tudo no dia do pedido; pedidos varridos por direção a partir de Teresina, um caminhão por região, do mais perto ao mais longe ou o contrário (despacho manual bem feito) |
-| B) Otimizado, mesmo dia | mesma regra de prazo, rotas otimizadas (Clarke-Wright + busca local + ILS) |
+| B) Otimizado, mesmo dia | mesma regra de prazo; ótimo provado por dia (programação dinâmica) em dias de até 16 pedidos, senão Clarke-Wright + busca local + ILS |
 | C) X% flexível | X% dos pedidos aceitam até 2 dias de espera; o solver escolhe o dia e a rota |
 
 A curva C mostra **quanto custa a meta de entregar no mesmo dia**.
@@ -94,7 +95,23 @@ econômico e equilibrado (menor R$). Repete os extremos nas 20 semanas. Grava `s
 python3 scripts/pareto.py    # ~40 s
 ```
 
-## Modelo exato
+## Ótimo provado com frota (`scripts/exato_frota.py`)
+Resolve de forma exata o problema completo de um dia: várias viagens por caminhão, jornada, frota limitada e
+custo por caminhão usado. Enumera todas as viagens e todos os "dias de caminhão" possíveis (programação
+dinâmica sobre subconjuntos) e escolhe a melhor partição no HiGHS. Compara com o solver Rust, que para a
+política B usa o mesmo tipo de método (implementado à parte, em Rust) em dias de até 16 pedidos.
+
+```bash
+python3 scripts/exato_frota.py            # 5 dias da referência + semana pequena com dia de entrega livre
+python3 scripts/exato_frota.py --semanas  # 100 dias e 20 semanas pequenas das semanas simuladas (~1 min)
+```
+Gap negativo é bug: o script termina com erro se o solver sair mais barato que o "ótimo".
+
+Variáveis de ambiente do solver para experimentos: `ILS_ITERS` (padrão 1000), `BLOCOS=1` (movimentos de bloco
+na busca local; testados na Fase 4 e desligados porque não melhoraram o resultado), `EXATO_DIA=0` (desliga o
+método exato por dia), `SO_MESMO_DIA=1` (pula as políticas com espera).
+
+## Modelo exato (roteamento puro, sem frota)
 `scripts/exato.py` confere a heurística contra o **ótimo provado** em instâncias pequenas. Ele pega os
 primeiros N pedidos de `dados/` (só os que cabem numa jornada), monta o roteamento de um dia como
 programação linear inteira (fluxo de carga + tempo acumulado, consumo crescendo com a carga) e resolve com o

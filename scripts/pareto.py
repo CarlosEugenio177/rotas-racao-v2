@@ -29,7 +29,7 @@ SOLVER = RAIZ / "solver/target/release/solver"
 
 
 def pesos(lam):
-    return {"PESO_DIESEL": f"{2 * (1 - lam):.4f}", "PESO_TEMPO": f"{2 * lam:.4f}"}
+    return {"PESO_DIESEL": f"{2 * (1 - lam):.4f}", "PESO_TEMPO": f"{2 * lam:.4f}", "SO_MESMO_DIA": "1"}
 
 
 def referencia(lam):

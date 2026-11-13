@@ -1,0 +1,382 @@
+{
+ "limite_s": 120,
+ "mesmo_dia": [
+  {
+   "nome": "dia 1",
+   "pedidos": 11,
+   "heuristica": 5689.19287403504,
+   "exato": 5689.192874035041,
+   "otimo_provado": true,
+   "limite_inferior": 5689.192874035041,
+   "gap_pct": -1.1102230246251565e-14,
+   "gap_max_pct": -1.1102230246251565e-14,
+   "tempo_exato": 0.06194949150085449,
+   "binarias": 201,
+   "restricoes": 12,
+   "plano_exato": [
+    [
+     [
+      [
+       7,
+       8,
+       2
+      ]
+     ],
+     [
+      [
+       6,
+       9
+      ]
+     ],
+     [
+      [
+       3,
+       5,
+       10
+      ],
+      [
+       4
+      ]
+     ],
+     [
+      [
+       1,
+       11
+      ]
+     ]
+    ]
+   ],
+   "viagens_possiveis": 151,
+   "dias_de_caminhao": 201,
+   "caminhoes_heur": 4,
+   "caminhoes_exato": 4
+  },
+  {
+   "nome": "dia 2",
+   "pedidos": 12,
+   "heuristica": 6410.179377508904,
+   "exato": 6410.179377508903,
+   "otimo_provado": true,
+   "limite_inferior": 6410.179377508903,
+   "gap_pct": 2.220446049250313e-14,
+   "gap_max_pct": 2.220446049250313e-14,
+   "tempo_exato": 0.11976003646850586,
+   "binarias": 198,
+   "restricoes": 13,
+   "plano_exato": [
+    [
+     [
+      [
+       18,
+       19
+      ]
+     ],
+     [
+      [
+       16,
+       14,
+       17,
+       20
+      ]
+     ],
+     [
+      [
+       12,
+       21,
+       22
+      ]
+     ],
+     [
+      [
+       13,
+       23,
+       15
+      ]
+     ]
+    ]
+   ],
+   "viagens_possiveis": 198,
+   "dias_de_caminhao": 198,
+   "caminhoes_heur": 4,
+   "caminhoes_exato": 4
+  },
+  {
+   "nome": "dia 3",
+   "pedidos": 10,
+   "heuristica": 4759.653252909093,
+   "exato": 4759.653252909093,
+   "otimo_provado": true,
+   "limite_inferior": 4759.653252909093,
+   "gap_pct": 0.0,
+   "gap_max_pct": 0.0,
+   "tempo_exato": 0.04012489318847656,
+   "binarias": 190,
+   "restricoes": 11,
+   "plano_exato": [
+    [
+     [
+      [
+       28,
+       32,
+       26,
+       27
+      ]
+     ],
+     [
+      [
+       33,
+       30
+      ]
+     ],
+     [
+      [
+       24
+      ],
+      [
+       29,
+       25,
+       34
+      ]
+     ]
+    ]
+   ],
+   "viagens_possiveis": 152,
+   "dias_de_caminhao": 190,
+   "caminhoes_heur": 3,
+   "caminhoes_exato": 3
+  },
+  {
+   "nome": "dia 4",
+   "pedidos": 11,
+   "heuristica": 6423.348726966662,
+   "exato": 6423.348726966662,
+   "otimo_provado": true,
+   "limite_inferior": 6423.348726966662,
+   "gap_pct": 0.0,
+   "gap_max_pct": 0.0,
+   "tempo_exato": 0.04863715171813965,
+   "binarias": 102,
+   "restricoes": 12,
+   "plano_exato": [
+    [
+     [
+      [
+       35,
+       41
+      ]
+     ],
+     [
+      [
+       42,
+       37,
+       36
+      ]
+     ],
+     [
+      [
+       43,
+       40
+      ]
+     ],
+     [
+      [
+       39,
+       38,
+       45,
+       44
+      ]
+     ]
+    ]
+   ],
+   "viagens_possiveis": 93,
+   "dias_de_caminhao": 102,
+   "caminhoes_heur": 4,
+   "caminhoes_exato": 4
+  },
+  {
+   "nome": "dia 5",
+   "pedidos": 12,
+   "heuristica": 6109.544005705352,
+   "exato": 6109.544005705352,
+   "otimo_provado": true,
+   "limite_inferior": 6109.544005705352,
+   "gap_pct": 0.0,
+   "gap_max_pct": 0.0,
+   "tempo_exato": 0.09280610084533691,
+   "binarias": 223,
+   "restricoes": 13,
+   "plano_exato": [
+    [
+     [
+      [
+       48,
+       52,
+       49
+      ]
+     ],
+     [
+      [
+       53,
+       51,
+       55
+      ]
+     ],
+     [
+      [
+       54,
+       57,
+       56
+      ]
+     ],
+     [
+      [
+       58,
+       47,
+       46
+      ]
+     ]
+    ]
+   ],
+   "viagens_possiveis": 223,
+   "dias_de_caminhao": 223,
+   "caminhoes_heur": 4,
+   "caminhoes_exato": 4
+  }
+ ],
+ "semana": {
+  "heuristica": 29391.91823712505,
+  "exato": 29391.91823712505,
+  "limite_inferior": 29391.91823712505,
+  "todos_provados": true,
+  "gap_pct": 0.0,
+  "gap_max_pct": 0.0
+ },
+ "flexivel_pequena": {
+  "nome": "3 dias, 100% flex.",
+  "pedidos": 15,
+  "heuristica": 6347.94,
+  "exato": 6298.0580893481365,
+  "otimo_provado": true,
+  "limite_inferior": 6298.0580893481365,
+  "gap_pct": 0.7920204917802875,
+  "gap_max_pct": 0.7920204917802875,
+  "tempo_exato": 1.5331687927246094,
+  "binarias": 850,
+  "restricoes": 18,
+  "plano_exato": [
+   [],
+   [],
+   [
+    [
+     [
+      25,
+      1,
+      15
+     ]
+    ],
+    [
+     [
+      16,
+      14,
+      26
+     ]
+    ],
+    [
+     [
+      4,
+      12,
+      27,
+      5
+     ]
+    ],
+    [
+     [
+      3,
+      28,
+      2,
+      13
+     ],
+     [
+      24
+     ]
+    ]
+   ]
+  ],
+  "viagens_possiveis": 497,
+  "dias_de_caminhao": 720
+ },
+ "mesmo_dia_pequena": {
+  "nome": "3 dias, mesmo dia",
+  "pedidos": 15,
+  "heuristica": 9240.43,
+  "exato": 9240.426951568714,
+  "otimo_provado": true,
+  "limite_inferior": 9240.426951568714,
+  "gap_pct": 3.2990156206835763e-05,
+  "gap_max_pct": 3.2990156206835763e-05,
+  "tempo_exato": 1.388956069946289,
+  "binarias": 56,
+  "restricoes": 18,
+  "plano_exato": [
+   [
+    [
+     [
+      1
+     ]
+    ],
+    [
+     [
+      4
+     ]
+    ],
+    [
+     [
+      3,
+      5,
+      2
+     ]
+    ]
+   ],
+   [
+    [
+     [
+      13,
+      15
+     ]
+    ],
+    [
+     [
+      12,
+      14,
+      16
+     ]
+    ]
+   ],
+   [
+    [
+     [
+      25,
+      24
+     ]
+    ],
+    [
+     [
+      28,
+      26,
+      27
+     ]
+    ]
+   ]
+  ],
+  "viagens_possiveis": 497,
+  "dias_de_caminhao": 720
+ },
+ "conferencia": {
+  "pedidos": 7,
+  "enumeracao": 4148.101050139867,
+  "big_m": 4148.101050139867,
+  "big_m_provado": true,
+  "tempo_enumeracao": 0.0047914981842041016,
+  "tempo_big_m": 8.38398027420044
+ }
+}

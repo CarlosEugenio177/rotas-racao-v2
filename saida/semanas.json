@@ -133,35 +133,35 @@
     {
      "nome": "C) Otimizado, 75% aceitam até 2 dias",
      "flex": 0.75,
-     "custo": 27475.24,
-     "km": 6854.6,
-     "litros": 2548.0,
-     "horas": 193.0,
+     "custo": 27612.06,
+     "km": 6875.3,
+     "litros": 2563.6,
+     "horas": 193.7,
      "viagens": 20,
-     "mesmo_dia_pct": 62.5,
+     "mesmo_dia_pct": 60.7,
      "caminhoes_dia": [
       0,
       2,
       5,
-      5,
-      5
+      4,
+      6
      ]
     },
     {
      "nome": "C) Otimizado, 100% aceitam até 2 dias",
      "flex": 1.0,
-     "custo": 27237.17,
-     "km": 6772.1,
-     "litros": 2526.2,
-     "horas": 190.4,
-     "viagens": 19,
-     "mesmo_dia_pct": 57.1,
+     "custo": 27366.34,
+     "km": 6808.3,
+     "litros": 2535.7,
+     "horas": 192.3,
+     "viagens": 20,
+     "mesmo_dia_pct": 51.8,
      "caminhoes_dia": [
       0,
-      3,
-      4,
       2,
-      8
+      5,
+      3,
+      7
      ]
     }
    ]
@@ -382,33 +382,33 @@
     {
      "nome": "C) Otimizado, 50% aceitam até 2 dias",
      "flex": 0.5,
-     "custo": 26761.66,
-     "km": 6640.4,
-     "litros": 2485.1,
-     "horas": 184.5,
-     "viagens": 17,
-     "mesmo_dia_pct": 78.8,
+     "custo": 26744.76,
+     "km": 6653.8,
+     "litros": 2478.4,
+     "horas": 185.6,
+     "viagens": 18,
+     "mesmo_dia_pct": 80.8,
      "caminhoes_dia": [
       2,
       3,
       4,
-      3,
-      5
+      4,
+      4
      ]
     },
     {
      "nome": "C) Otimizado, 75% aceitam até 2 dias",
      "flex": 0.75,
-     "custo": 25088.88,
-     "km": 6152.4,
-     "litros": 2322.6,
-     "horas": 174.4,
-     "viagens": 16,
-     "mesmo_dia_pct": 53.8,
+     "custo": 25104.68,
+     "km": 6132.1,
+     "litros": 2317.8,
+     "horas": 176.1,
+     "viagens": 17,
+     "mesmo_dia_pct": 51.9,
      "caminhoes_dia": [
       0,
-      2,
-      5,
+      3,
+      4,
       4,
       5
      ]
@@ -416,17 +416,17 @@
     {
      "nome": "C) Otimizado, 100% aceitam até 2 dias",
      "flex": 1.0,
-     "custo": 24962.12,
-     "km": 6069.8,
-     "litros": 2306.8,
-     "horas": 174.0,
+     "custo": 24462.84,
+     "km": 5934.1,
+     "litros": 2267.9,
+     "horas": 172.8,
      "viagens": 16,
      "mesmo_dia_pct": 53.8,
      "caminhoes_dia": [
       0,
       3,
+      4,
       3,
-      5,
       5
      ]
     }
@@ -503,13 +503,13 @@
      "litros": 3410.8,
      "horas": 251.8,
      "viagens": 23,
-     "mesmo_dia_pct": 80.0,
+     "mesmo_dia_pct": 81.5,
      "caminhoes_dia": [
       3,
       5,
       4,
-      4,
-      7
+      5,
+      6
      ]
     },
     {
@@ -549,18 +549,18 @@
     {
      "nome": "C) Otimizado, 100% aceitam até 2 dias",
      "flex": 1.0,
-     "custo": 32433.95,
-     "km": 8082.0,
-     "litros": 3030.7,
-     "horas": 228.6,
+     "custo": 32623.59,
+     "km": 8123.2,
+     "litros": 3050.4,
+     "horas": 230.2,
      "viagens": 22,
-     "mesmo_dia_pct": 43.1,
+     "mesmo_dia_pct": 50.8,
      "caminhoes_dia": [
-      0,
-      4,
-      4,
-      5,
-      6
+      1,
+      2,
+      3,
+      8,
+      5
      ]
     }
    ]
@@ -631,15 +631,15 @@
     {
      "nome": "C) Otimizado, 25% aceitam até 2 dias",
      "flex": 0.25,
-     "custo": 28142.5,
-     "km": 7083.7,
-     "litros": 2609.8,
-     "horas": 194.2,
-     "viagens": 18,
-     "mesmo_dia_pct": 88.2,
+     "custo": 28066.56,
+     "km": 7083.5,
+     "litros": 2624.8,
+     "horas": 194.0,
+     "viagens": 17,
+     "mesmo_dia_pct": 84.3,
      "caminhoes_dia": [
       4,
-      4,
+      3,
       3,
       3,
       4
@@ -648,10 +648,10 @@
     {
      "nome": "C) Otimizado, 50% aceitam até 2 dias",
      "flex": 0.5,
-     "custo": 26250.26,
-     "km": 6608.9,
-     "litros": 2446.2,
-     "horas": 182.9,
+     "custo": 26237.4,
+     "km": 6614.3,
+     "litros": 2444.0,
+     "horas": 183.1,
      "viagens": 17,
      "mesmo_dia_pct": 76.5,
      "caminhoes_dia": [
@@ -665,34 +665,34 @@
     {
      "nome": "C) Otimizado, 75% aceitam até 2 dias",
      "flex": 0.75,
-     "custo": 25467.32,
-     "km": 6371.9,
-     "litros": 2385.4,
-     "horas": 177.7,
-     "viagens": 15,
-     "mesmo_dia_pct": 62.7,
+     "custo": 25493.47,
+     "km": 6414.4,
+     "litros": 2385.0,
+     "horas": 178.6,
+     "viagens": 16,
+     "mesmo_dia_pct": 58.8,
      "caminhoes_dia": [
       2,
       2,
-      4,
-      2,
+      3,
+      3,
       5
      ]
     },
     {
      "nome": "C) Otimizado, 100% aceitam até 2 dias",
      "flex": 1.0,
-     "custo": 23180.14,
-     "km": 5613.3,
-     "litros": 2131.2,
-     "horas": 163.4,
-     "viagens": 15,
-     "mesmo_dia_pct": 49.0,
+     "custo": 23224.99,
+     "km": 5653.9,
+     "litros": 2154.8,
+     "horas": 165.1,
+     "viagens": 16,
+     "mesmo_dia_pct": 52.9,
      "caminhoes_dia": [
       1,
       2,
       4,
-      3,
+      2,
       5
      ]
     }
@@ -764,12 +764,12 @@
     {
      "nome": "C) Otimizado, 25% aceitam até 2 dias",
      "flex": 0.25,
-     "custo": 27771.05,
+     "custo": 27758.79,
      "km": 7465.1,
-     "litros": 2632.2,
+     "litros": 2630.5,
      "horas": 182.3,
      "viagens": 17,
-     "mesmo_dia_pct": 88.6,
+     "mesmo_dia_pct": 85.7,
      "caminhoes_dia": [
       2,
       4,
@@ -781,12 +781,12 @@
     {
      "nome": "C) Otimizado, 50% aceitam até 2 dias",
      "flex": 0.5,
-     "custo": 26120.28,
+     "custo": 26108.02,
      "km": 7027.5,
-     "litros": 2495.7,
+     "litros": 2494.0,
      "horas": 172.6,
      "viagens": 15,
-     "mesmo_dia_pct": 80.0,
+     "mesmo_dia_pct": 77.1,
      "caminhoes_dia": [
       1,
       4,
@@ -815,12 +815,12 @@
     {
      "nome": "C) Otimizado, 100% aceitam até 2 dias",
      "flex": 1.0,
-     "custo": 22834.58,
-     "km": 5979.2,
-     "litros": 2172.8,
-     "horas": 153.7,
-     "viagens": 14,
-     "mesmo_dia_pct": 57.1,
+     "custo": 22753.87,
+     "km": 5974.6,
+     "litros": 2169.1,
+     "horas": 151.9,
+     "viagens": 13,
+     "mesmo_dia_pct": 54.3,
      "caminhoes_dia": [
       0,
       2,
@@ -897,15 +897,15 @@
     {
      "nome": "C) Otimizado, 25% aceitam até 2 dias",
      "flex": 0.25,
-     "custo": 33515.32,
-     "km": 8569.7,
-     "litros": 3135.3,
-     "horas": 227.2,
-     "viagens": 21,
-     "mesmo_dia_pct": 82.7,
+     "custo": 33288.0,
+     "km": 8551.4,
+     "litros": 3133.4,
+     "horas": 226.1,
+     "viagens": 20,
+     "mesmo_dia_pct": 84.6,
      "caminhoes_dia": [
       2,
-      7,
+      6,
       5,
       3,
       4
@@ -936,11 +936,11 @@
      "litros": 2633.1,
      "horas": 196.0,
      "viagens": 18,
-     "mesmo_dia_pct": 61.5,
+     "mesmo_dia_pct": 59.6,
      "caminhoes_dia": [
       2,
-      3,
-      3,
+      2,
+      4,
       3,
       6
      ]
@@ -948,18 +948,18 @@
     {
      "nome": "C) Otimizado, 100% aceitam até 2 dias",
      "flex": 1.0,
-     "custo": 27748.05,
-     "km": 6950.7,
-     "litros": 2587.3,
-     "horas": 192.5,
+     "custo": 27733.89,
+     "km": 6957.0,
+     "litros": 2584.1,
+     "horas": 192.8,
      "viagens": 17,
      "mesmo_dia_pct": 44.2,
      "caminhoes_dia": [
       0,
-      5,
-      2,
+      4,
+      4,
       3,
-      7
+      6
      ]
     }
    ]
@@ -1047,52 +1047,52 @@
     {
      "nome": "C) Otimizado, 50% aceitam até 2 dias",
      "flex": 0.5,
-     "custo": 39428.43,
-     "km": 10251.8,
-     "litros": 3674.8,
-     "horas": 268.8,
+     "custo": 39341.44,
+     "km": 10195.7,
+     "litros": 3685.4,
+     "horas": 269.4,
      "viagens": 25,
-     "mesmo_dia_pct": 84.6,
+     "mesmo_dia_pct": 86.2,
      "caminhoes_dia": [
+      4,
+      4,
       5,
-      3,
       5,
-      6,
       6
      ]
     },
     {
      "nome": "C) Otimizado, 75% aceitam até 2 dias",
      "flex": 0.75,
-     "custo": 36765.73,
-     "km": 9556.2,
-     "litros": 3446.5,
-     "horas": 253.7,
+     "custo": 36514.38,
+     "km": 9495.3,
+     "litros": 3418.7,
+     "horas": 252.1,
      "viagens": 23,
-     "mesmo_dia_pct": 70.8,
+     "mesmo_dia_pct": 61.5,
      "caminhoes_dia": [
-      3,
-      3,
-      5,
-      5,
+      1,
+      2,
+      7,
+      6,
       6
      ]
     },
     {
      "nome": "C) Otimizado, 100% aceitam até 2 dias",
      "flex": 1.0,
-     "custo": 36017.43,
-     "km": 9339.2,
-     "litros": 3382.4,
-     "horas": 250.4,
+     "custo": 36001.73,
+     "km": 9345.1,
+     "litros": 3381.7,
+     "horas": 250.0,
      "viagens": 23,
-     "mesmo_dia_pct": 52.3,
+     "mesmo_dia_pct": 47.7,
      "caminhoes_dia": [
-      0,
-      4,
-      7,
       1,
-      9
+      2,
+      6,
+      5,
+      7
      ]
     }
    ]
@@ -1163,18 +1163,18 @@
     {
      "nome": "C) Otimizado, 25% aceitam até 2 dias",
      "flex": 0.25,
-     "custo": 31713.46,
-     "km": 8129.4,
-     "litros": 2989.4,
-     "horas": 214.7,
-     "viagens": 19,
-     "mesmo_dia_pct": 81.5,
+     "custo": 31506.56,
+     "km": 8013.5,
+     "litros": 2940.5,
+     "horas": 213.7,
+     "viagens": 20,
+     "mesmo_dia_pct": 83.3,
      "caminhoes_dia": [
       4,
-      2,
       3,
-      6,
-      4
+      3,
+      5,
+      5
      ]
     },
     {
@@ -1197,16 +1197,16 @@
     {
      "nome": "C) Otimizado, 75% aceitam até 2 dias",
      "flex": 0.75,
-     "custo": 27377.95,
-     "km": 6870.4,
-     "litros": 2570.3,
-     "horas": 190.3,
+     "custo": 26882.92,
+     "km": 6711.5,
+     "litros": 2516.6,
+     "horas": 186.9,
      "viagens": 18,
-     "mesmo_dia_pct": 51.9,
+     "mesmo_dia_pct": 53.7,
      "caminhoes_dia": [
       2,
-      2,
-      2,
+      3,
+      1,
       4,
       6
      ]
@@ -1214,18 +1214,18 @@
     {
      "nome": "C) Otimizado, 100% aceitam até 2 dias",
      "flex": 1.0,
-     "custo": 26667.37,
-     "km": 6647.9,
-     "litros": 2495.0,
-     "horas": 185.0,
-     "viagens": 17,
-     "mesmo_dia_pct": 48.1,
+     "custo": 26866.08,
+     "km": 6768.4,
+     "litros": 2515.9,
+     "horas": 186.5,
+     "viagens": 18,
+     "mesmo_dia_pct": 40.7,
      "caminhoes_dia": [
-      2,
-      2,
+      1,
       2,
       3,
-      7
+      4,
+      6
      ]
     }
    ]
@@ -1463,35 +1463,35 @@
     {
      "nome": "C) Otimizado, 75% aceitam até 2 dias",
      "flex": 0.75,
-     "custo": 30149.43,
-     "km": 7718.7,
-     "litros": 2820.9,
-     "horas": 209.6,
+     "custo": 30135.73,
+     "km": 7712.7,
+     "litros": 2821.1,
+     "horas": 209.1,
      "viagens": 19,
-     "mesmo_dia_pct": 50.9,
+     "mesmo_dia_pct": 63.2,
      "caminhoes_dia": [
       2,
-      0,
+      1,
       4,
-      5,
+      4,
       7
      ]
     },
     {
      "nome": "C) Otimizado, 100% aceitam até 2 dias",
      "flex": 1.0,
-     "custo": 29191.63,
-     "km": 7427.3,
-     "litros": 2737.2,
-     "horas": 204.1,
+     "custo": 29183.76,
+     "km": 7418.7,
+     "litros": 2735.5,
+     "horas": 204.2,
      "viagens": 18,
-     "mesmo_dia_pct": 50.9,
+     "mesmo_dia_pct": 45.6,
      "caminhoes_dia": [
       0,
       0,
       6,
-      5,
-      6
+      4,
+      7
      ]
     }
    ]
@@ -1545,86 +1545,86 @@
     {
      "nome": "B) Otimizado, tudo no mesmo dia",
      "flex": 0.0,
-     "custo": 47144.0,
-     "km": 12102.4,
-     "litros": 4430.0,
-     "horas": 318.0,
-     "viagens": 29,
+     "custo": 47061.2,
+     "km": 12098.1,
+     "litros": 4444.1,
+     "horas": 317.8,
+     "viagens": 28,
      "mesmo_dia_pct": 100.0,
      "caminhoes_dia": [
       6,
       5,
       5,
       7,
-      6
+      5
      ]
     },
     {
      "nome": "C) Otimizado, 25% aceitam até 2 dias",
      "flex": 0.25,
-     "custo": 42647.0,
+     "custo": 42649.32,
      "km": 10812.1,
-     "litros": 3994.9,
+     "litros": 3995.3,
      "horas": 292.1,
      "viagens": 28,
-     "mesmo_dia_pct": 85.1,
+     "mesmo_dia_pct": 83.8,
      "caminhoes_dia": [
       5,
       4,
       4,
-      7,
-      6
+      6,
+      7
      ]
     },
     {
      "nome": "C) Otimizado, 50% aceitam até 2 dias",
      "flex": 0.5,
-     "custo": 41644.1,
-     "km": 10516.9,
-     "litros": 3910.9,
-     "horas": 285.2,
+     "custo": 41119.2,
+     "km": 10407.6,
+     "litros": 3853.4,
+     "horas": 281.7,
      "viagens": 26,
-     "mesmo_dia_pct": 74.3,
+     "mesmo_dia_pct": 78.4,
      "caminhoes_dia": [
-      3,
-      3,
+      4,
       5,
-      8,
+      3,
+      7,
       6
      ]
     },
     {
      "nome": "C) Otimizado, 75% aceitam até 2 dias",
      "flex": 0.75,
-     "custo": 39421.67,
-     "km": 9939.0,
-     "litros": 3684.4,
-     "horas": 272.3,
-     "viagens": 26,
+     "custo": 39282.73,
+     "km": 9947.6,
+     "litros": 3691.1,
+     "horas": 272.0,
+     "viagens": 25,
      "mesmo_dia_pct": 55.4,
      "caminhoes_dia": [
       1,
-      2,
+      3,
       7,
-      8,
-      6
+      5,
+      7
      ]
     },
     {
      "nome": "C) Otimizado, 100% aceitam até 2 dias",
      "flex": 1.0,
-     "custo": 38208.16,
-     "km": 9619.1,
-     "litros": 3578.0,
-     "horas": 263.8,
-     "viagens": 24,
-     "mesmo_dia_pct": 59.5,
+     "custo": 37781.26,
+     "km": 9532.6,
+     "litros": 3551.5,
+     "horas": 262.0,
+     "viagens": 23,
+     "mesmo_dia_pct": 51.4,
      "caminhoes_dia": [
       1,
-      4,
+      3,
       5,
-      6,
-      7
+      5,
+      8
      ]
     }
    ]
@@ -1695,16 +1695,16 @@
     {
      "nome": "C) Otimizado, 25% aceitam até 2 dias",
      "flex": 0.25,
-     "custo": 33534.72,
-     "km": 8650.2,
-     "litros": 3163.6,
-     "horas": 227.0,
-     "viagens": 21,
+     "custo": 33548.0,
+     "km": 8648.9,
+     "litros": 3141.9,
+     "horas": 226.7,
+     "viagens": 22,
      "mesmo_dia_pct": 90.7,
      "caminhoes_dia": [
       4,
       3,
-      4,
+      5,
       4,
       5
      ]
@@ -1729,35 +1729,35 @@
     {
      "nome": "C) Otimizado, 75% aceitam até 2 dias",
      "flex": 0.75,
-     "custo": 31253.85,
-     "km": 7989.3,
-     "litros": 2932.7,
-     "horas": 213.2,
-     "viagens": 20,
-     "mesmo_dia_pct": 74.1,
+     "custo": 31015.12,
+     "km": 7884.9,
+     "litros": 2908.5,
+     "horas": 211.1,
+     "viagens": 19,
+     "mesmo_dia_pct": 64.8,
      "caminhoes_dia": [
       4,
-      2,
+      1,
       3,
       4,
-      6
+      7
      ]
     },
     {
      "nome": "C) Otimizado, 100% aceitam até 2 dias",
      "flex": 1.0,
-     "custo": 29120.8,
-     "km": 7430.7,
-     "litros": 2747.1,
-     "horas": 199.3,
+     "custo": 29177.24,
+     "km": 7450.8,
+     "litros": 2751.0,
+     "horas": 200.2,
      "viagens": 18,
-     "mesmo_dia_pct": 51.9,
+     "mesmo_dia_pct": 37.0,
      "caminhoes_dia": [
-      1,
+      0,
+      2,
+      5,
       3,
-      3,
-      4,
-      6
+      7
      ]
     }
    ]
@@ -1862,35 +1862,35 @@
     {
      "nome": "C) Otimizado, 75% aceitam até 2 dias",
      "flex": 0.75,
-     "custo": 13953.72,
-     "km": 3365.2,
-     "litros": 1289.1,
-     "horas": 97.0,
+     "custo": 13902.16,
+     "km": 3342.3,
+     "litros": 1282.5,
+     "horas": 96.9,
      "viagens": 10,
-     "mesmo_dia_pct": 61.3,
+     "mesmo_dia_pct": 54.8,
      "caminhoes_dia": [
       2,
       0,
       2,
-      2,
-      3
+      1,
+      4
      ]
     },
     {
      "nome": "C) Otimizado, 100% aceitam até 2 dias",
      "flex": 1.0,
-     "custo": 13916.34,
-     "km": 3365.2,
-     "litros": 1284.0,
-     "horas": 97.0,
+     "custo": 13866.19,
+     "km": 3342.3,
+     "litros": 1277.6,
+     "horas": 96.9,
      "viagens": 10,
-     "mesmo_dia_pct": 58.1,
+     "mesmo_dia_pct": 51.6,
      "caminhoes_dia": [
       2,
       0,
+      2,
       1,
-      3,
-      3
+      4
      ]
     }
    ]
@@ -1944,9 +1944,9 @@
     {
      "nome": "B) Otimizado, tudo no mesmo dia",
      "flex": 0.0,
-     "custo": 31447.15,
-     "km": 7824.8,
-     "litros": 2898.4,
+     "custo": 31439.24,
+     "km": 7786.5,
+     "litros": 2897.1,
      "horas": 216.0,
      "viagens": 21,
      "mesmo_dia_pct": 100.0,
@@ -1961,16 +1961,16 @@
     {
      "nome": "C) Otimizado, 25% aceitam até 2 dias",
      "flex": 0.25,
-     "custo": 28940.29,
-     "km": 7187.7,
-     "litros": 2666.4,
-     "horas": 201.0,
-     "viagens": 20,
-     "mesmo_dia_pct": 83.0,
+     "custo": 28688.72,
+     "km": 7105.9,
+     "litros": 2659.6,
+     "horas": 200.2,
+     "viagens": 19,
+     "mesmo_dia_pct": 84.9,
      "caminhoes_dia": [
       2,
       4,
-      4,
+      3,
       5,
       4
      ]
@@ -1978,52 +1978,52 @@
     {
      "nome": "C) Otimizado, 50% aceitam até 2 dias",
      "flex": 0.5,
-     "custo": 26100.75,
-     "km": 6350.8,
-     "litros": 2400.9,
-     "horas": 183.0,
+     "custo": 26161.7,
+     "km": 6371.8,
+     "litros": 2407.9,
+     "horas": 183.3,
      "viagens": 17,
-     "mesmo_dia_pct": 58.5,
+     "mesmo_dia_pct": 62.3,
      "caminhoes_dia": [
       2,
       3,
       4,
-      2,
-      6
+      3,
+      5
      ]
     },
     {
      "nome": "C) Otimizado, 75% aceitam até 2 dias",
      "flex": 0.75,
-     "custo": 25176.85,
-     "km": 6086.3,
-     "litros": 2324.4,
-     "horas": 176.9,
+     "custo": 25483.81,
+     "km": 6178.6,
+     "litros": 2358.5,
+     "horas": 178.8,
      "viagens": 16,
-     "mesmo_dia_pct": 52.8,
+     "mesmo_dia_pct": 60.4,
      "caminhoes_dia": [
       1,
       2,
       3,
-      5,
-      5
+      7,
+      3
      ]
     },
     {
      "nome": "C) Otimizado, 100% aceitam até 2 dias",
      "flex": 1.0,
-     "custo": 24228.38,
-     "km": 5856.8,
-     "litros": 2235.6,
-     "horas": 172.9,
+     "custo": 24057.14,
+     "km": 5781.9,
+     "litros": 2219.8,
+     "horas": 171.0,
      "viagens": 16,
-     "mesmo_dia_pct": 37.7,
+     "mesmo_dia_pct": 41.5,
      "caminhoes_dia": [
       0,
-      2,
+      1,
       4,
-      3,
-      6
+      5,
+      5
      ]
     }
    ]
@@ -2116,11 +2116,11 @@
      "litros": 3664.1,
      "horas": 269.1,
      "viagens": 25,
-     "mesmo_dia_pct": 66.7,
+     "mesmo_dia_pct": 65.2,
      "caminhoes_dia": [
       1,
-      6,
-      3,
+      5,
+      4,
       9,
       5
      ]
@@ -2133,28 +2133,28 @@
      "litros": 3465.0,
      "horas": 255.4,
      "viagens": 24,
-     "mesmo_dia_pct": 53.0,
+     "mesmo_dia_pct": 54.5,
      "caminhoes_dia": [
       1,
       4,
       3,
-      7,
-      6
+      8,
+      5
      ]
     },
     {
      "nome": "C) Otimizado, 100% aceitam até 2 dias",
      "flex": 1.0,
-     "custo": 36270.22,
-     "km": 9299.3,
-     "litros": 3408.6,
-     "horas": 252.5,
-     "viagens": 24,
+     "custo": 36158.44,
+     "km": 9250.3,
+     "litros": 3399.3,
+     "horas": 251.0,
+     "viagens": 23,
      "mesmo_dia_pct": 48.5,
      "caminhoes_dia": [
       0,
-      3,
-      5,
+      4,
+      4,
       7,
       6
      ]
@@ -2244,17 +2244,17 @@
     {
      "nome": "C) Otimizado, 50% aceitam até 2 dias",
      "flex": 0.5,
-     "custo": 32442.22,
-     "km": 8115.4,
-     "litros": 3029.3,
-     "horas": 223.3,
+     "custo": 32338.58,
+     "km": 8096.1,
+     "litros": 3018.4,
+     "horas": 222.5,
      "viagens": 20,
-     "mesmo_dia_pct": 75.9,
+     "mesmo_dia_pct": 72.2,
      "caminhoes_dia": [
       3,
       4,
-      4,
-      3,
+      5,
+      2,
       6
      ]
     },
@@ -2278,16 +2278,16 @@
     {
      "nome": "C) Otimizado, 100% aceitam até 2 dias",
      "flex": 1.0,
-     "custo": 30285.64,
-     "km": 7550.2,
-     "litros": 2814.5,
-     "horas": 209.7,
+     "custo": 30250.63,
+     "km": 7538.2,
+     "litros": 2810.7,
+     "horas": 209.5,
      "viagens": 19,
-     "mesmo_dia_pct": 46.3,
+     "mesmo_dia_pct": 42.6,
      "caminhoes_dia": [
       0,
-      6,
-      3,
+      4,
+      5,
       3,
       7
      ]
@@ -2382,13 +2382,13 @@
      "litros": 2787.4,
      "horas": 194.6,
      "viagens": 19,
-     "mesmo_dia_pct": 83.8,
+     "mesmo_dia_pct": 86.5,
      "caminhoes_dia": [
       3,
       3,
       4,
-      3,
-      5
+      4,
+      4
      ]
     },
     {
@@ -2399,30 +2399,30 @@
      "litros": 2707.2,
      "horas": 189.3,
      "viagens": 18,
-     "mesmo_dia_pct": 83.8,
+     "mesmo_dia_pct": 81.1,
      "caminhoes_dia": [
       3,
       2,
       4,
-      4,
-      4
+      3,
+      5
      ]
     },
     {
      "nome": "C) Otimizado, 100% aceitam até 2 dias",
      "flex": 1.0,
-     "custo": 25774.12,
-     "km": 6886.9,
-     "litros": 2451.7,
+     "custo": 25664.77,
+     "km": 6870.6,
+     "litros": 2437.0,
      "horas": 171.7,
-     "viagens": 15,
-     "mesmo_dia_pct": 56.8,
+     "viagens": 16,
+     "mesmo_dia_pct": 43.2,
      "caminhoes_dia": [
       0,
       2,
+      3,
       5,
-      4,
-      4
+      5
      ]
     }
    ]
@@ -2493,14 +2493,14 @@
     {
      "nome": "C) Otimizado, 25% aceitam até 2 dias",
      "flex": 0.25,
-     "custo": 37772.73,
-     "km": 9963.2,
-     "litros": 3546.6,
-     "horas": 256.9,
-     "viagens": 24,
-     "mesmo_dia_pct": 94.3,
+     "custo": 37722.99,
+     "km": 9939.3,
+     "litros": 3565.1,
+     "horas": 256.7,
+     "viagens": 23,
+     "mesmo_dia_pct": 92.5,
      "caminhoes_dia": [
-      4,
+      3,
       5,
       4,
       5,
@@ -2527,33 +2527,33 @@
     {
      "nome": "C) Otimizado, 75% aceitam até 2 dias",
      "flex": 0.75,
-     "custo": 32148.88,
-     "km": 8353.7,
-     "litros": 3022.1,
-     "horas": 221.3,
+     "custo": 31691.34,
+     "km": 8190.8,
+     "litros": 2973.9,
+     "horas": 217.7,
      "viagens": 19,
-     "mesmo_dia_pct": 62.3,
+     "mesmo_dia_pct": 60.4,
      "caminhoes_dia": [
       2,
       4,
       2,
-      6,
-      5
+      5,
+      6
      ]
     },
     {
      "nome": "C) Otimizado, 100% aceitam até 2 dias",
      "flex": 1.0,
-     "custo": 31100.97,
-     "km": 8049.9,
-     "litros": 2926.6,
-     "horas": 215.6,
+     "custo": 31018.99,
+     "km": 8028.4,
+     "litros": 2915.7,
+     "horas": 215.5,
      "viagens": 18,
-     "mesmo_dia_pct": 39.6,
+     "mesmo_dia_pct": 45.3,
      "caminhoes_dia": [
       0,
-      1,
-      6,
+      2,
+      5,
       5,
       6
      ]
@@ -2626,10 +2626,10 @@
     {
      "nome": "C) Otimizado, 25% aceitam até 2 dias",
      "flex": 0.25,
-     "custo": 33839.59,
-     "km": 8611.2,
-     "litros": 3160.3,
-     "horas": 231.9,
+     "custo": 33815.64,
+     "km": 8617.8,
+     "litros": 3158.7,
+     "horas": 231.5,
      "viagens": 22,
      "mesmo_dia_pct": 83.3,
      "caminhoes_dia": [
@@ -2643,31 +2643,31 @@
     {
      "nome": "C) Otimizado, 50% aceitam até 2 dias",
      "flex": 0.5,
-     "custo": 33058.09,
-     "km": 8328.8,
-     "litros": 3076.7,
-     "horas": 226.2,
+     "custo": 32873.85,
+     "km": 8297.9,
+     "litros": 3055.0,
+     "horas": 225.4,
      "viagens": 21,
      "mesmo_dia_pct": 80.0,
      "caminhoes_dia": [
+      3,
       4,
-      4,
-      4,
-      4,
-      5
+      5,
+      5,
+      4
      ]
     },
     {
      "nome": "C) Otimizado, 75% aceitam até 2 dias",
      "flex": 0.75,
-     "custo": 30784.04,
-     "km": 7695.1,
-     "litros": 2841.0,
-     "horas": 213.9,
-     "viagens": 21,
-     "mesmo_dia_pct": 65.0,
+     "custo": 30629.04,
+     "km": 7660.5,
+     "litros": 2848.2,
+     "horas": 212.9,
+     "viagens": 20,
+     "mesmo_dia_pct": 63.3,
      "caminhoes_dia": [
-      2,
+      1,
       4,
       4,
       5,
@@ -2677,16 +2677,16 @@
     {
      "nome": "C) Otimizado, 100% aceitam até 2 dias",
      "flex": 1.0,
-     "custo": 29535.42,
-     "km": 7355.4,
-     "litros": 2747.1,
-     "horas": 207.1,
+     "custo": 29272.85,
+     "km": 7288.8,
+     "litros": 2719.0,
+     "horas": 205.2,
      "viagens": 20,
-     "mesmo_dia_pct": 46.7,
+     "mesmo_dia_pct": 48.3,
      "caminhoes_dia": [
-      0,
+      1,
+      4,
       3,
-      5,
       4,
       6
      ]
@@ -2700,34 +2700,34 @@
     "nome": "B) Otimizado, tudo no mesmo dia",
     "flex": 0.0,
     "economia_pct": {
-     "media": 9.36,
+     "media": 9.37,
      "min": 3.06,
      "max": 17.91,
      "desvio": 3.5
     },
     "economia_rs": {
-     "media": 3547.63,
+     "media": 3552.17,
      "min": 999.58,
      "max": 7859.18,
-     "desvio": 1750.63
+     "desvio": 1757.12
     },
     "km": {
-     "media": 1048.88,
+     "media": 1051.01,
      "min": 288.5,
      "max": 2375.9,
-     "desvio": 517.78
+     "desvio": 516.93
     },
     "litros": {
-     "media": 338.21,
+     "media": 337.57,
      "min": 97.9,
      "max": 755.1,
-     "desvio": 166.39
+     "desvio": 165.12
     },
     "horas": {
-     "media": 21.46,
+     "media": 21.47,
      "min": 7.3,
      "max": 48.0,
-     "desvio": 10.55
+     "desvio": 10.57
     },
     "por_volume": {
      "fraca": {
@@ -2743,10 +2743,10 @@
       "desvio": 3.73
      },
      "forte": {
-      "media": 9.95,
+      "media": 9.98,
       "min": 7.5,
       "max": 12.21,
-      "desvio": 1.97
+      "desvio": 2.01
      }
     }
    },
@@ -2754,50 +2754,50 @@
     "nome": "C) Otimizado, 25% aceitam até 2 dias",
     "flex": 0.25,
     "economia_pct": {
-     "media": 14.03,
+     "media": 14.14,
      "min": 4.03,
      "max": 22.94,
-     "desvio": 4.65
+     "desvio": 4.67
     },
     "economia_rs": {
-     "media": 5311.69,
+     "media": 5353.3,
      "min": 1317.67,
-     "max": 10722.95,
-     "desvio": 2531.21
+     "max": 10720.63,
+     "desvio": 2533.57
     },
     "km": {
-     "media": 1539.94,
+     "media": 1551.68,
      "min": 458.2,
      "max": 3169.5,
-     "desvio": 728.68
+     "desvio": 730.96
     },
     "litros": {
-     "media": 499.68,
+     "media": 502.12,
      "min": 143.2,
-     "max": 1053.8,
-     "desvio": 235.25
+     "max": 1053.4,
+     "desvio": 237.91
     },
     "horas": {
-     "media": 32.2,
+     "media": 32.41,
      "min": 9.0,
      "max": 64.7,
-     "desvio": 14.93
+     "desvio": 14.97
     },
     "por_volume": {
      "fraca": {
-      "media": 10.91,
+      "media": 10.92,
       "min": 4.03,
       "max": 15.39,
-      "desvio": 5.2
+      "desvio": 5.19
      },
      "normal": {
-      "media": 14.7,
-      "min": 7.65,
+      "media": 14.92,
+      "min": 7.77,
       "max": 22.94,
-      "desvio": 4.15
+      "desvio": 4.16
      },
      "forte": {
-      "media": 15.79,
+      "media": 15.8,
       "min": 11.14,
       "max": 20.17,
       "desvio": 4.43
@@ -2808,53 +2808,53 @@
     "nome": "C) Otimizado, 50% aceitam até 2 dias",
     "flex": 0.5,
     "economia_pct": {
-     "media": 18.48,
+     "media": 18.57,
      "min": 9.94,
      "max": 25.82,
-     "desvio": 4.11
+     "desvio": 4.12
     },
     "economia_rs": {
-     "media": 6930.1,
+     "media": 6974.14,
      "min": 2887.4,
-     "max": 11725.85,
-     "desvio": 2524.95
+     "max": 12250.75,
+     "desvio": 2574.89
     },
     "km": {
-     "media": 1985.56,
+     "media": 1994.35,
      "min": 805.1,
-     "max": 3464.7,
-     "desvio": 745.87
+     "max": 3574.0,
+     "desvio": 756.53
     },
     "litros": {
-     "media": 650.75,
+     "media": 654.9,
      "min": 281.0,
-     "max": 1137.8,
-     "desvio": 240.08
+     "max": 1195.3,
+     "desvio": 246.03
     },
     "horas": {
-     "media": 41.84,
+     "media": 41.99,
      "min": 15.8,
-     "max": 71.6,
-     "desvio": 15.4
+     "max": 75.1,
+     "desvio": 15.79
     },
     "por_volume": {
      "fraca": {
-      "media": 15.9,
+      "media": 15.91,
       "min": 9.94,
       "max": 21.34,
-      "desvio": 4.85
+      "desvio": 4.84
      },
      "normal": {
-      "media": 19.32,
-      "min": 14.43,
+      "media": 19.34,
+      "min": 14.71,
       "max": 25.82,
-      "desvio": 3.56
+      "desvio": 3.5
      },
      "forte": {
-      "media": 19.36,
-      "min": 13.91,
+      "media": 19.69,
+      "min": 14.1,
       "max": 24.71,
-      "desvio": 4.13
+      "desvio": 4.21
      }
     }
    },
@@ -2862,53 +2862,53 @@
     "nome": "C) Otimizado, 75% aceitam até 2 dias",
     "flex": 0.75,
     "economia_pct": {
-     "media": 23.21,
+     "media": 23.36,
      "min": 12.77,
-     "max": 31.29,
-     "desvio": 4.34
+     "max": 31.32,
+     "desvio": 4.37
     },
     "economia_rs": {
-     "media": 8717.25,
-     "min": 3849.0,
-     "max": 13948.28,
-     "desvio": 2958.26
+     "media": 8783.06,
+     "min": 3900.56,
+     "max": 14087.22,
+     "desvio": 2998.48
     },
     "km": {
-     "media": 2490.78,
-     "min": 1083.9,
-     "max": 4042.6,
-     "desvio": 865.17
+     "media": 2511.12,
+     "min": 1106.8,
+     "max": 4034.0,
+     "desvio": 874.6
     },
     "litros": {
-     "media": 819.29,
-     "min": 357.9,
-     "max": 1364.3,
-     "desvio": 283.5
+     "media": 824.38,
+     "min": 364.5,
+     "max": 1357.6,
+     "desvio": 285.06
     },
     "horas": {
-     "media": 52.54,
-     "min": 23.1,
-     "max": 84.5,
-     "desvio": 17.75
+     "media": 52.91,
+     "min": 23.2,
+     "max": 84.8,
+     "desvio": 18.07
     },
     "por_volume": {
      "fraca": {
-      "media": 19.64,
+      "media": 19.7,
       "min": 12.77,
       "max": 25.53,
-      "desvio": 4.69
+      "desvio": 4.72
      },
      "normal": {
-      "media": 24.59,
+      "media": 24.75,
       "min": 17.21,
-      "max": 31.29,
-      "desvio": 4.08
+      "max": 31.32,
+      "desvio": 4.12
      },
      "forte": {
-      "media": 24.01,
-      "min": 19.72,
+      "media": 24.25,
+      "min": 20.27,
       "max": 27.33,
-      "desvio": 2.94
+      "desvio": 2.79
      }
     }
    },
@@ -2916,53 +2916,53 @@
     "nome": "C) Otimizado, 100% aceitam até 2 dias",
     "flex": 1.0,
     "economia_pct": {
-     "media": 26.25,
-     "min": 20.12,
-     "max": 33.47,
-     "desvio": 3.7
+     "media": 26.42,
+     "min": 20.21,
+     "max": 33.49,
+     "desvio": 3.57
     },
     "economia_rs": {
-     "media": 9782.62,
-     "min": 3886.38,
-     "max": 15161.79,
-     "desvio": 2848.8
+     "media": 9845.01,
+     "min": 3936.53,
+     "max": 15588.69,
+     "desvio": 2846.79
     },
     "km": {
-     "media": 2803.72,
-     "min": 1083.9,
-     "max": 4362.5,
-     "desvio": 829.7
+     "media": 2815.11,
+     "min": 1106.8,
+     "max": 4449.0,
+     "desvio": 825.42
     },
     "litros": {
-     "media": 919.36,
-     "min": 363.0,
-     "max": 1470.7,
-     "desvio": 269.28
+     "media": 923.66,
+     "min": 369.4,
+     "max": 1497.2,
+     "desvio": 267.84
     },
     "horas": {
-     "media": 58.87,
-     "min": 23.1,
-     "max": 93.0,
-     "desvio": 17.08
+     "media": 59.02,
+     "min": 23.2,
+     "max": 94.8,
+     "desvio": 17.02
     },
     "por_volume": {
      "fraca": {
-      "media": 24.48,
-      "min": 21.19,
+      "media": 24.65,
+      "min": 21.52,
       "max": 29.29,
-      "desvio": 3.46
+      "desvio": 3.31
      },
      "normal": {
-      "media": 27.25,
-      "min": 20.12,
-      "max": 33.47,
-      "desvio": 4.0
+      "media": 27.38,
+      "min": 20.21,
+      "max": 33.49,
+      "desvio": 3.8
      },
      "forte": {
-      "media": 26.02,
-      "min": 21.36,
-      "max": 29.31,
-      "desvio": 3.24
+      "media": 26.28,
+      "min": 21.39,
+      "max": 29.21,
+      "desvio": 3.31
      }
     }
    }
@@ -2972,34 +2972,34 @@
     "nome": "B) Otimizado, tudo no mesmo dia",
     "flex": 0.0,
     "economia_pct": {
-     "media": 4.48,
+     "media": 4.49,
      "min": 0.51,
      "max": 9.31,
-     "desvio": 2.36
+     "desvio": 2.37
     },
     "economia_rs": {
-     "media": 1694.37,
+     "media": 1698.91,
      "min": 147.97,
      "max": 4287.01,
-     "desvio": 1213.44
+     "desvio": 1222.32
     },
     "km": {
-     "media": 519.06,
+     "media": 521.19,
      "min": 36.4,
      "max": 1293.3,
-     "desvio": 355.86
+     "desvio": 355.88
     },
     "litros": {
-     "media": 155.16,
+     "media": 154.52,
      "min": 15.9,
      "max": 398.8,
-     "desvio": 107.57
+     "desvio": 106.16
     },
     "horas": {
-     "media": 10.58,
+     "media": 10.59,
      "min": 1.1,
      "max": 27.8,
-     "desvio": 7.68
+     "desvio": 7.7
     },
     "por_volume": {
      "fraca": {
@@ -3015,10 +3015,10 @@
       "desvio": 1.45
      },
      "forte": {
-      "media": 7.33,
+      "media": 7.36,
       "min": 5.12,
       "max": 9.31,
-      "desvio": 1.61
+      "desvio": 1.63
      }
     }
    },
@@ -3026,50 +3026,50 @@
     "nome": "C) Otimizado, 25% aceitam até 2 dias",
     "flex": 0.25,
     "economia_pct": {
-     "media": 9.41,
+     "media": 9.53,
      "min": 1.95,
      "max": 16.87,
-     "desvio": 3.68
+     "desvio": 3.71
     },
     "economia_rs": {
-     "media": 3458.43,
+     "media": 3500.03,
      "min": 624.66,
-     "max": 8655.0,
-     "desvio": 1976.67
+     "max": 8652.68,
+     "desvio": 1979.31
     },
     "km": {
-     "media": 1010.12,
+     "media": 1021.87,
      "min": 249.8,
      "max": 2503.9,
-     "desvio": 571.34
+     "desvio": 570.93
     },
     "litros": {
-     "media": 316.63,
+     "media": 319.07,
      "min": 66.7,
-     "max": 798.4,
-     "desvio": 178.39
+     "max": 798.0,
+     "desvio": 179.07
     },
     "horas": {
-     "media": 21.33,
+     "media": 21.53,
      "min": 4.6,
      "max": 52.0,
-     "desvio": 11.94
+     "desvio": 11.98
     },
     "por_volume": {
      "fraca": {
-      "media": 6.03,
+      "media": 6.04,
       "min": 1.95,
       "max": 10.18,
       "desvio": 3.7
      },
      "normal": {
-      "media": 9.1,
-      "min": 4.33,
-      "max": 12.08,
-      "desvio": 2.26
+      "media": 9.33,
+      "min": 4.45,
+      "max": 12.85,
+      "desvio": 2.4
      },
      "forte": {
-      "media": 13.4,
+      "media": 13.41,
       "min": 11.59,
       "max": 16.87,
       "desvio": 2.15
@@ -3080,53 +3080,53 @@
     "nome": "C) Otimizado, 50% aceitam até 2 dias",
     "flex": 0.5,
     "economia_pct": {
-     "media": 14.08,
+     "media": 14.18,
      "min": 7.99,
-     "max": 20.71,
-     "desvio": 3.37
+     "max": 20.52,
+     "desvio": 3.43
     },
     "economia_rs": {
-     "media": 5076.83,
+     "media": 5120.88,
      "min": 1906.6,
-     "max": 9657.9,
-     "desvio": 2098.27
+     "max": 10182.8,
+     "desvio": 2162.8
     },
     "km": {
-     "media": 1455.75,
+     "media": 1464.53,
      "min": 508.1,
-     "max": 2799.1,
-     "desvio": 632.46
+     "max": 2908.4,
+     "desvio": 646.98
     },
     "litros": {
-     "media": 467.7,
+     "media": 471.86,
      "min": 171.8,
-     "max": 882.4,
-     "desvio": 199.47
+     "max": 939.9,
+     "desvio": 205.37
     },
     "horas": {
-     "media": 30.97,
+     "media": 31.12,
      "min": 9.7,
-     "max": 58.9,
-     "desvio": 13.26
+     "max": 62.4,
+     "desvio": 13.65
     },
     "por_volume": {
      "fraca": {
-      "media": 11.3,
+      "media": 11.31,
       "min": 7.99,
       "max": 14.84,
-      "desvio": 2.79
+      "desvio": 2.78
      },
      "normal": {
-      "media": 13.98,
+      "media": 14.0,
       "min": 10.23,
-      "max": 20.71,
-      "desvio": 3.04
+      "max": 20.52,
+      "desvio": 2.98
      },
      "forte": {
-      "media": 17.07,
-      "min": 14.4,
-      "max": 18.83,
-      "desvio": 2.11
+      "media": 17.41,
+      "min": 14.59,
+      "max": 19.85,
+      "desvio": 2.2
      }
     }
    },
@@ -3134,53 +3134,53 @@
     "nome": "C) Otimizado, 75% aceitam até 2 dias",
     "flex": 0.75,
     "economia_pct": {
-     "media": 19.08,
+     "media": 19.25,
      "min": 10.88,
      "max": 24.79,
-     "desvio": 3.51
+     "desvio": 3.52
     },
     "economia_rs": {
-     "media": 6863.99,
-     "min": 2868.2,
-     "max": 11880.33,
-     "desvio": 2517.27
+     "media": 6929.79,
+     "min": 2919.76,
+     "max": 12019.27,
+     "desvio": 2553.91
     },
     "km": {
-     "media": 1960.97,
-     "min": 786.9,
-     "max": 3377.0,
-     "desvio": 727.0
+     "media": 1981.31,
+     "min": 809.8,
+     "max": 3368.4,
+     "desvio": 733.82
     },
     "litros": {
-     "media": 636.24,
-     "min": 248.7,
-     "max": 1108.9,
-     "desvio": 237.28
+     "media": 641.34,
+     "min": 255.3,
+     "max": 1102.2,
+     "desvio": 238.52
     },
     "horas": {
-     "media": 41.66,
+     "media": 42.04,
      "min": 16.7,
-     "max": 71.8,
-     "desvio": 15.51
+     "max": 72.1,
+     "desvio": 15.76
     },
     "por_volume": {
      "fraca": {
-      "media": 15.25,
+      "media": 15.32,
       "min": 10.88,
       "max": 17.75,
-      "desvio": 2.68
+      "desvio": 2.73
      },
      "normal": {
-      "media": 19.62,
+      "media": 19.8,
       "min": 14.48,
       "max": 24.79,
-      "desvio": 3.05
+      "desvio": 2.97
      },
      "forte": {
-      "media": 21.83,
-      "min": 20.18,
-      "max": 23.34,
-      "desvio": 1.38
+      "media": 22.07,
+      "min": 20.73,
+      "max": 23.43,
+      "desvio": 1.23
      }
     }
    },
@@ -3188,53 +3188,53 @@
     "nome": "C) Otimizado, 100% aceitam até 2 dias",
     "flex": 1.0,
     "economia_pct": {
-     "media": 22.29,
-     "min": 17.27,
-     "max": 26.4,
-     "desvio": 2.78
+     "media": 22.46,
+     "min": 17.57,
+     "max": 26.92,
+     "desvio": 2.82
     },
     "economia_rs": {
-     "media": 7929.35,
-     "min": 2905.58,
-     "max": 13093.84,
-     "desvio": 2405.14
+     "media": 7991.75,
+     "min": 2955.73,
+     "max": 13520.74,
+     "desvio": 2445.33
     },
     "km": {
-     "media": 2273.9,
-     "min": 786.9,
-     "max": 3696.9,
-     "desvio": 695.47
+     "media": 2285.29,
+     "min": 809.8,
+     "max": 3783.4,
+     "desvio": 702.67
     },
     "litros": {
-     "media": 736.31,
-     "min": 253.8,
-     "max": 1215.3,
-     "desvio": 224.75
+     "media": 740.61,
+     "min": 260.2,
+     "max": 1241.8,
+     "desvio": 226.77
     },
     "horas": {
-     "media": 48.0,
-     "min": 17.0,
-     "max": 80.3,
-     "desvio": 14.76
+     "media": 48.14,
+     "min": 17.1,
+     "max": 82.1,
+     "desvio": 15.06
     },
     "por_volume": {
      "fraca": {
-      "media": 20.3,
-      "min": 17.27,
+      "media": 20.49,
+      "min": 17.57,
       "max": 24.93,
-      "desvio": 2.86
+      "desvio": 2.77
      },
      "normal": {
-      "media": 22.47,
-      "min": 17.49,
-      "max": 26.4,
+      "media": 22.59,
+      "min": 17.58,
+      "max": 26.92,
       "desvio": 2.86
      },
      "forte": {
-      "media": 23.91,
-      "min": 21.81,
-      "max": 25.52,
-      "desvio": 1.36
+      "media": 24.17,
+      "min": 21.84,
+      "max": 26.36,
+      "desvio": 1.73
      }
     }
    }

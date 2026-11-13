@@ -159,29 +159,17 @@ code{font-size:12.5px;background:var(--bg);padding:0 4px;border-radius:4px}
 </section>
 <section id="sec-exato" hidden>
 <h2>O plano encontrado é o melhor possível?</h2>
-<p class="intro-ex">Aqui não medimos o ganho em reais em relação ao jeito de hoje (isso está no topo da página). Medimos a <b>qualidade</b> do plano: se existe algum outro plano mais barato que o programa deixou passar. Para descobrir, usamos um método matemático que calcula o melhor plano possível e prova que não há outro mais barato. Ele só consegue fazer isso com poucos pedidos de cada vez.</p>
-<div class="destaque" id="ex-msg"></div>
-<div class="ex-grid">
-  <div class="painel">
-    <h4>Quanto tempo cada um leva para responder</h4>
-    <p class="ajuda">Cada linha da grade vale 10 vezes a de baixo. A linha laranja sobe muito rápido; a verde quase não sai do lugar.</p>
-    <div id="ex-graf"></div>
-    <p class="nota-ex">Uma semana real tem mais de 50 pedidos. Um dia movimentado já passa de 20. O método exato não termina a tempo nesses tamanhos, e o programa resolve a semana inteira em cerca de 2 segundos. Por isso se usa o programa no dia a dia.</p>
-  </div>
-  <div class="painel">
-    <h4>Teste por teste</h4>
-    <p class="ajuda">Cada teste é um dia de entregas com os primeiros pedidos da semana, caminhões à vontade e sem o custo fixo por caminhão, para comparar só a escolha das rotas.</p>
-    <div class="tab-wrap"><table class="cmp tab-ex" id="ex-tab"></table></div>
-  </div>
+<p class="intro-ex">Aqui não medimos o ganho em reais em relação ao jeito de hoje (isso está no topo da página). Medimos a <b>qualidade</b> do plano: se existe algum outro plano mais barato que o programa deixou passar.</p>
+<div class="destaque" id="pv-msg"></div>
+<div class="passos" id="pv-cards"></div>
+<div class="painel" style="margin-top:14px">
+  <h4>A semana do mapa, dia a dia</h4>
+  <p class="ajuda">Tudo entregue no mesmo dia, respeitando o limite de caminhões, o custo de cada caminhão usado e a jornada do motorista.</p>
+  <div class="tab-wrap"><table class="cmp tab-ex" id="pv-tab"></table></div>
 </div>
 <details>
   <summary>Para quem estudou pesquisa operacional</summary>
-  <ul>
-    <li><b>Modelo:</b> programação linear inteira de um dia (frota livre, sem custo fixo). Variáveis <code>x<sub>ij</sub></code> binárias (o caminhão vai de i para j), fluxo de carga <code>f<sub>ij</sub></code> ≥ 0 (toneladas no trecho, o que deixa o consumo crescente com a carga ainda linear e elimina subciclos) e tempo acumulado <code>T<sub>j</sub></code> com restrições do tipo MTZ para a jornada de 13 h.</li>
-    <li><b>Solver:</b> HiGHS, via <code>scipy.optimize.milp</code>, com limite de 300 s por instância. Script: <code>scripts/exato.py</code>.</li>
-    <li><b>Heurística comparada:</b> o próprio solver em Rust (Clarke-Wright + busca local + ILS), rodando no mesmo subconjunto.</li>
-    <li><b>Relaxação LP:</b> o mesmo modelo com <code>x<sub>ij</sub></code> fracionário dá um limite inferior para o custo. A distância entre esse limite e o ótimo cresce com o tamanho (tabela abaixo). Quanto mais fraco o limite, mais ramos o branch-and-bound precisa explorar antes de provar o ótimo, e por isso o exato fica lento.</li>
-  </ul>
+  <ul id="pv-po"></ul>
   <div class="tab-wrap"><table class="cmp tab-ex" id="ex-lp" style="margin-top:10px"></table></div>
 </details>
 </section>
@@ -429,45 +417,44 @@ if(PA){
 }
 const virg=s=>String(s).replace(".",",");
 const seg=v=>(v<0.1?virg(v.toFixed(2)):v<10?virg(v.toFixed(1)):Math.round(v).toLocaleString("pt-BR"))+" s";
-const EX=D.exato||[];
-if(EX.length){
+const PV=D.prova, EX=D.exato||[];
+if(PV){
   document.getElementById("sec-exato").hidden=false;
-  const igual=e=>e.otimo_provado&&e.gap_pct<0.005;
-  const nIg=EX.filter(igual).length, ult=EX[EX.length-1];
-  const r=ult.tempo_exato/ult.tempo_heur, rr=r>=100?Math.round(r/10)*10:Math.round(r);
-  const faixa=`de ${EX[0].n} a ${ult.n} pedidos`;
-  document.getElementById("ex-msg").innerHTML=(nIg===EX.length
-    ?`Em todos os testes em que dá para calcular o melhor plano possível (${faixa}), <b>o programa achou exatamente esse plano</b>, só que muito mais rápido.`
-    :`Em ${nIg} de ${EX.length} testes (${faixa}), o programa achou exatamente o melhor plano possível. Nos outros, ficou perto (veja a tabela).`)+
-    `<small>Com ${ult.n} pedidos: o método exato levou <b>${seg(ult.tempo_exato)}</b>, o programa levou <b>${seg(ult.tempo_heur)}</b> (cerca de ${rr} vezes mais rápido).</small>`;
-  // gráfico: tempo (escala log) x número de pedidos
-  const W=560,H=300,ml=58,mr=92,mt=14,mb=42;
-  const ns=EX.map(e=>e.n), x0=Math.min(...ns), x1=Math.max(...ns);
-  const lo=Math.log10(0.03), hi=Math.log10(Math.max(120,...EX.map(e=>e.tempo_exato))*1.15);
-  const X=n=>ml+(n-x0)/(x1-x0||1)*(W-ml-mr), Y=v=>mt+(hi-Math.log10(Math.max(v,0.03)))/(hi-lo)*(H-mt-mb);
-  const ticks=[[0.1,"0,1 s"],[1,"1 s"],[10,"10 s"],[100,"100 s"],[1000,"1.000 s"]].filter(([v])=>Math.log10(v)<=hi);
-  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Tempo do método exato e do programa por número de pedidos" style="font:12px system-ui,sans-serif">`;
-  ticks.forEach(([v,t])=>s+=`<line x1="${ml}" x2="${W-mr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#e7e5e4"/><text x="${ml-8}" y="${Y(v)+4}" text-anchor="end" fill="#78716c">${t}</text>`);
-  ns.forEach(n=>s+=`<text x="${X(n)}" y="${H-mb+18}" text-anchor="middle" fill="#78716c">${n}</text>`);
-  s+=`<text x="${(ml+W-mr)/2}" y="${H-6}" text-anchor="middle" fill="#78716c">número de pedidos</text>`;
-  const serie=(k,cor,nome)=>{
-    const pts=EX.map(e=>`${X(e.n).toFixed(1)},${Y(e[k]).toFixed(1)}`).join(" ");
-    s+=`<polyline points="${pts}" fill="none" stroke="${cor}" stroke-width="3" stroke-linejoin="round"/>`;
-    EX.forEach(e=>s+=`<circle cx="${X(e.n)}" cy="${Y(e[k])}" r="4" fill="${cor}"><title>${e.n} pedidos: ${seg(e[k])}</title></circle>`);
-    const u=EX[EX.length-1];
-    s+=`<text x="${X(u.n)+8}" y="${Y(u[k])+4}" fill="${cor}" font-weight="600">${nome}</text><text x="${X(u.n)+8}" y="${Y(u[k])+19}" fill="${cor}">${seg(u[k])}</text>`;
-  };
-  serie("tempo_exato","#c2410c","Método exato");
-  serie("tempo_heur","#15803d","Programa");
-  document.getElementById("ex-graf").innerHTML=s+"</svg>";
-  document.getElementById("ex-tab").innerHTML=
-    `<tr><th>Pedidos</th><th>Melhor plano possível</th><th>Plano do programa</th><th>Diferença</th><th>Tempo exato</th><th>Tempo programa</th></tr>`+
-    EX.map(e=>`<tr><td>${e.n}</td><td>${brl(e.exato)}</td><td>${brl(e.heuristica)}</td>
-      <td class="${igual(e)?"ok":""}">${igual(e)?"igual":"+"+virg(e.gap_pct.toFixed(1))+"%"}${e.otimo_provado?"":" (não provado)"}</td>
-      <td>${seg(e.tempo_exato)}</td><td>${seg(e.tempo_heur)}</td></tr>`).join("");
-  document.getElementById("ex-lp").innerHTML=
-    `<tr><th>Pedidos</th><th>Variáveis binárias</th><th>Restrições</th><th>Ótimo (R$)</th><th>Relaxação LP (R$)</th><th>Distância</th></tr>`+
-    EX.map(e=>`<tr><td>${e.n}</td><td>${e.binarias}</td><td>${e.restricoes}</td><td>${brl(e.exato)}</td><td>${brl(e.lp)}</td><td>${virg(((1-e.lp/e.exato)*100).toFixed(1))}%</td></tr>`).join("");
+  const zero=l=>l.otimo_provado&&Math.abs(l.gap_pct)<0.005;
+  const sm=PV.semanas, md=sm?sm.mesmo_dia:null, fx=sm?sm.flexivel:null;
+  const nDias=PV.dias.length+(md?md.n:0), okDias=PV.dias.filter(zero).length+(md?md.no_otimo:0);
+  const nFlex=1+(fx?fx.n:0), okFlex=(zero(PV.flex)?1:0)+(fx?fx.no_otimo:0);
+  const piorFlex=Math.max(PV.flex.gap_pct,fx?fx.gap_max_pct:0);
+  const pedMax=Math.max(...PV.dias.map(l=>l.pedidos),md?md.pedidos_max:0);
+  document.getElementById("pv-msg").innerHTML=(okDias===nDias
+    ?`<b>No plano principal, com tudo entregue no mesmo dia, sim: está provado.</b> Para cada dia, o programa examina de forma organizada todas as maneiras de dividir os pedidos em viagens e caminhões e fica com a mais barata. Não existe plano mais barato.`
+    :`No plano principal, com tudo entregue no mesmo dia, o programa achou o melhor plano possível em ${okDias} de ${nDias} dias testados.`)+
+    `<small>Conferimos com um segundo método de cálculo, feito à parte: os dois chegaram ao mesmo custo nos ${nDias} dias testados (dias de até ${pedMax} pedidos).</small>`;
+  document.getElementById("pv-cards").innerHTML=`
+    <div class="passo"><div class="n">Provado</div><h3>Tudo no mesmo dia</h3><p>O melhor plano possível de cada dia, com limite de ${PAR.frota} caminhões, custo por caminhão usado e jornada de ${PAR.jornada_h} h.</p>
+      <div class="valor">${okDias} de ${nDias} dias</div><div class="delta">melhor plano possível, conferido por dois métodos</div>
+      <div style="font-size:12.5px;color:var(--mut);margin-top:8px">${PV.dias.length} dias da semana do mapa${md?` e ${md.n} dias das semanas simuladas`:""}</div></div>
+    <div class="passo"><div class="n">Muito perto, sem prova</div><h3>Quando clientes aceitam esperar</h3><p>Escolher também o dia de cada entrega torna a conta grande demais para provar na semana inteira. Testamos em semanas pequenas (3 dias, 15 pedidos), onde ainda dá para calcular o melhor plano.</p>
+      <div class="valor">${okFlex} de ${nFlex} testes</div><div class="delta" style="color:var(--mut);font-weight:500">no melhor plano possível; no pior caso, ${pc(piorFlex)}% acima</div>
+      <div style="font-size:12.5px;color:var(--mut);margin-top:8px">Na semana inteira com espera, o plano é bom, mas não há prova de que seja o melhor.</div></div>
+    <div class="passo"><div class="n">O que a prova não cobre</div><h3>Vale para esta simulação</h3><p>"Melhor possível" quer dizer: dentro das regras e dos custos desta simulação. Se o consumo real ou os tempos de estrada forem outros, o melhor plano pode mudar.</p>
+      <div style="font-size:12.5px;color:var(--mut);margin-top:8px">Estradas calculadas para carro (tempo aumentado em ${Math.round((PAR.fator_caminhao-1)*100)}%) e consumo estimado. Veja as premissas no fim da página.</div></div>`;
+  document.getElementById("pv-tab").innerHTML=
+    `<tr><th>Dia</th><th>Pedidos</th><th>Melhor plano possível</th><th>Plano do programa</th><th>Diferença</th><th>Caminhões</th></tr>`+
+    PV.dias.map((l,i)=>`<tr><td>Dia ${i+1}</td><td>${l.pedidos}</td><td>${brl(l.exato)}</td><td>${brl(l.heuristica)}</td><td class="${zero(l)?"ok":""}">${zero(l)?"igual":"+"+virg(l.gap_pct.toFixed(2))+"%"}</td><td>${l.caminhoes_exato}</td></tr>`).join("")+
+    `<tr><td><b>Semana</b></td><td>${PV.dias.reduce((a,l)=>a+l.pedidos,0)}</td><td><b>${brl(PV.semana.exato)}</b></td><td><b>${brl(PV.semana.heuristica)}</b></td><td class="ok">${Math.abs(PV.semana.gap_pct)<0.005?"igual":"+"+virg(PV.semana.gap_pct.toFixed(2))+"%"}</td><td></td></tr>`;
+  const ult=EX.length?EX[EX.length-1]:null, cf=PV.conferencia;
+  document.getElementById("pv-po").innerHTML=[
+    `<b>Problema:</b> roteamento com várias viagens por caminhão (multi-trip), frota limitada, custo fixo por caminhão usado, jornada máxima e consumo de diesel que cresce com a carga.`,
+    `<b>Método do programa (por dia):</b> programação dinâmica sobre subconjuntos. Para cada conjunto de pedidos que cabe no caminhão, todas as ordens de visita não dominadas em (custo, horas); como a carga em cada trecho só depende de quem falta entregar, a recorrência é exata. Depois, o "dia de caminhão" mais barato para cada conjunto (viagens do mesmo caminhão somando até a jornada) e, por fim, a melhor partição dos pedidos em até ${PAR.frota} dias de caminhão. Vale para dias de até 16 pedidos; acima disso o programa usa busca local (Clarke-Wright + ILS).`,
+    `<b>Conferência independente:</b> a mesma enumeração refeita em Python, com o passo final resolvido como partição de conjuntos no HiGHS (<code>scripts/exato_frota.py</code>). Mesmo custo em ${nDias} de ${nDias} dias.`,
+    cf?`<b>Terceira formulação:</b> modelo compacto com big-M (variáveis de arco, fluxo de carga e tempo acumulado entre viagens). É fraco: só prova instâncias pequenas. Em ${cf.pedidos} pedidos deu ${brl(cf.big_m)}, igual à enumeração, em ${seg(cf.tempo_big_m)} contra ${seg(cf.tempo_enumeracao)}.`:"",
+    `<b>Com dia de entrega livre:</b> o exato (enumeração + partição com colunas por dia) só alcança cerca de 15 pedidos no total. Nesses ${nFlex} testes a busca local (ILS) ficou em média ${fx?virg(fx.gap_medio_pct.toFixed(3)):"0"}% acima do ótimo nas semanas simuladas e ${virg(PV.flex.gap_pct.toFixed(2))}% na semana do mapa reduzida.`,
+    ult?`<b>Roteamento puro, sem frota (tabela abaixo):</b> programação inteira com variáveis <code>x<sub>ij</sub></code>, fluxo <code>f<sub>ij</sub></code> e tempo <code>T<sub>j</sub></code> no HiGHS (<code>scripts/exato.py</code>). Com ${ult.n} pedidos leva ${seg(ult.tempo_exato)}, porque a relaxação linear fica a ${virg(((1-ult.lp/ult.exato)*100).toFixed(0))}% do ótimo e o branch-and-bound precisa explorar muitos ramos. Dá o mesmo custo do programa em todos os tamanhos.`:"",
+  ].filter(Boolean).map(t=>`<li>${t}</li>`).join("");
+  document.getElementById("ex-lp").innerHTML=!EX.length?"":
+    `<tr><th>Pedidos</th><th>Variáveis binárias</th><th>Ótimo (R$)</th><th>Programa (R$)</th><th>Relaxação LP (R$)</th><th>Distância</th><th>Tempo do modelo inteiro</th></tr>`+
+    EX.map(e=>`<tr><td>${e.n}</td><td>${e.binarias}</td><td>${brl(e.exato)}</td><td>${brl(e.heuristica)}</td><td>${brl(e.lp)}</td><td>${virg(((1-e.lp/e.exato)*100).toFixed(1))}%</td><td>${seg(e.tempo_exato)}</td></tr>`).join("");
 }
 const DI=[...(D.diesel||[]).filter(x=>Math.abs(x.diesel-PAR.diesel_rs_l)>1e-6),{diesel:PAR.diesel_rs_l,politicas:P,base_regiao:REGIAO,atual:true}]
   .filter(x=>FORTE!=="regiao"||x.base_regiao)

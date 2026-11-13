@@ -205,6 +205,19 @@
     [
      {
       "pedidos": [
+       18,
+       22,
+       21,
+       12
+      ],
+      "km": 419.8,
+      "h": 12.43,
+      "litros": 170.9,
+      "carga": 10.5,
+      "custo": 1622.18
+     },
+     {
+      "pedidos": [
        13,
        15,
        23
@@ -227,19 +240,6 @@
       "litros": 165.7,
       "carga": 11.5,
       "custo": 1545.34
-     },
-     {
-      "pedidos": [
-       18,
-       22,
-       21,
-       12
-      ],
-      "km": 419.8,
-      "h": 12.43,
-      "litros": 170.9,
-      "carga": 10.5,
-      "custo": 1622.18
      },
      {
       "pedidos": [
@@ -431,18 +431,6 @@
      },
      {
       "pedidos": [
-       3,
-       5,
-       10
-      ],
-      "km": 148.7,
-      "h": 6.22,
-      "litros": 60.1,
-      "carga": 9.5,
-      "custo": 626.04
-     },
-     {
-      "pedidos": [
        7,
        8,
        2
@@ -452,6 +440,18 @@
       "litros": 86.4,
       "carga": 9.5,
       "custo": 869.49
+     },
+     {
+      "pedidos": [
+       3,
+       5,
+       10
+      ],
+      "km": 148.7,
+      "h": 6.22,
+      "litros": 60.1,
+      "carga": 9.5,
+      "custo": 626.04
      },
      {
       "pedidos": [
@@ -713,18 +713,6 @@
      },
      {
       "pedidos": [
-       3,
-       5,
-       10
-      ],
-      "km": 148.7,
-      "h": 6.22,
-      "litros": 60.1,
-      "carga": 9.5,
-      "custo": 626.04
-     },
-     {
-      "pedidos": [
        7,
        8,
        2
@@ -734,6 +722,18 @@
       "litros": 86.4,
       "carga": 9.5,
       "custo": 869.49
+     },
+     {
+      "pedidos": [
+       3,
+       5,
+       10
+      ],
+      "km": 148.7,
+      "h": 6.22,
+      "litros": 60.1,
+      "carga": 9.5,
+      "custo": 626.04
      },
      {
       "pedidos": [
@@ -972,13 +972,13 @@
    "max": 3.1
   },
   "litros": {
-   "media": 46.1,
+   "media": 45.4,
    "min": 0.0,
    "max": 94.6
   },
   "rs": {
-   "media": 290.8,
-   "min": -19.3,
+   "media": 285.9,
+   "min": -67.6,
    "max": 624.0
   },
   "detalhe": [
@@ -1000,15 +1000,15 @@
      {
       "lam": 1.0,
       "horas": 221.7,
-      "litros": 3112.1,
-      "custo": 33180.85
+      "litros": 3112.0,
+      "custo": 33180.46
      }
     ],
     "troca": {
      "horas": 3.1,
-     "litros": 64.2,
-     "rs": 375.92,
-     "horas_por_100l": 4.83,
+     "litros": 64.1,
+     "rs": 375.53,
+     "horas_por_100l": 4.84,
      "litros_por_hora": 20.7
     }
    },
@@ -1030,16 +1030,16 @@
      {
       "lam": 1.0,
       "horas": 168.9,
-      "litros": 2380.3,
-      "custo": 25347.01
+      "litros": 2356.9,
+      "custo": 25175.85
      }
     ],
     "troca": {
      "horas": 0.8,
-     "litros": 57.3,
-     "rs": 394.32,
-     "horas_por_100l": 1.4,
-     "litros_por_hora": 71.6
+     "litros": 33.9,
+     "rs": 223.16,
+     "horas_por_100l": 2.36,
+     "litros_por_hora": 42.4
     }
    },
    {
@@ -1047,9 +1047,9 @@
     "pontos": [
      {
       "lam": 0.0,
-      "horas": 205.0,
-      "litros": 2765.3,
-      "custo": 29965.15
+      "horas": 205.4,
+      "litros": 2773.2,
+      "custo": 29852.58
      },
      {
       "lam": 0.5,
@@ -1060,16 +1060,16 @@
      {
       "lam": 1.0,
       "horas": 204.3,
-      "litros": 2827.9,
-      "custo": 30221.05
+      "litros": 2828.6,
+      "custo": 30226.19
      }
     ],
     "troca": {
-     "horas": 0.7,
-     "litros": 62.6,
-     "rs": 255.9,
-     "horas_por_100l": 1.12,
-     "litros_por_hora": 89.4
+     "horas": 1.1,
+     "litros": 55.4,
+     "rs": 373.61,
+     "horas_por_100l": 1.99,
+     "litros_por_hora": 50.4
     }
    },
    {
@@ -1210,8 +1210,8 @@
      {
       "lam": 1.0,
       "horas": 285.4,
-      "litros": 4023.7,
-      "custo": 42474.6
+      "litros": 4029.3,
+      "custo": 42515.93
      }
     ],
     "troca": {
@@ -1323,23 +1323,23 @@
      },
      {
       "lam": 0.5,
-      "horas": 318.0,
-      "litros": 4430.0,
-      "custo": 47144.0
+      "horas": 317.8,
+      "litros": 4444.1,
+      "custo": 47061.2
      },
      {
       "lam": 1.0,
-      "horas": 319.3,
-      "litros": 4559.3,
-      "custo": 47946.37
+      "horas": 318.2,
+      "litros": 4558.4,
+      "custo": 47726.72
      }
     ],
     "troca": {
-     "horas": 1.0,
-     "litros": 6.1,
-     "rs": 15.19,
-     "horas_por_100l": 16.39,
-     "litros_por_hora": 6.1
+     "horas": 1.2,
+     "litros": 20.2,
+     "rs": -67.61,
+     "horas_por_100l": 5.94,
+     "litros_por_hora": 16.8
     }
    },
    {
@@ -1407,15 +1407,15 @@
     "pontos": [
      {
       "lam": 0.0,
-      "horas": 216.7,
-      "litros": 2898.0,
-      "custo": 31466.42
+      "horas": 216.0,
+      "litros": 2897.1,
+      "custo": 31439.24
      },
      {
       "lam": 0.5,
       "horas": 216.0,
-      "litros": 2898.4,
-      "custo": 31447.15
+      "litros": 2897.1,
+      "custo": 31439.24
      },
      {
       "lam": 1.0,
@@ -1425,11 +1425,11 @@
      }
     ],
     "troca": {
-     "horas": 0.7,
-     "litros": 0.4,
-     "rs": -19.27,
-     "horas_por_100l": 175.0,
-     "litros_por_hora": 0.6
+     "horas": 0.0,
+     "litros": 0.0,
+     "rs": 0.0,
+     "horas_por_100l": null,
+     "litros_por_hora": null
     }
    },
    {
@@ -1450,16 +1450,16 @@
      {
       "lam": 1.0,
       "horas": 299.3,
-      "litros": 4226.8,
-      "custo": 44737.71
+      "litros": 4228.9,
+      "custo": 44753.2
      }
     ],
     "troca": {
      "horas": 0.6,
-     "litros": 63.9,
-     "rs": 449.13,
-     "horas_por_100l": 0.94,
-     "litros_por_hora": 106.5
+     "litros": 66.0,
+     "rs": 464.62,
+     "horas_por_100l": 0.91,
+     "litros_por_hora": 110.0
     }
    },
    {
@@ -1540,16 +1540,16 @@
      {
       "lam": 1.0,
       "horas": 264.3,
-      "litros": 3732.8,
-      "custo": 39355.55
+      "litros": 3733.4,
+      "custo": 39360.14
      }
     ],
     "troca": {
      "horas": 0.7,
-     "litros": 55.4,
-     "rs": 204.72,
-     "horas_por_100l": 1.26,
-     "litros_por_hora": 79.1
+     "litros": 56.0,
+     "rs": 209.31,
+     "horas_por_100l": 1.25,
+     "litros_por_hora": 80.0
     }
    },
    {
@@ -1570,8 +1570,8 @@
      {
       "lam": 1.0,
       "horas": 248.7,
-      "litros": 3474.9,
-      "custo": 37003.14
+      "litros": 3475.7,
+      "custo": 37008.99
      }
     ],
     "troca": {

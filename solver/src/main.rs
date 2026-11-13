@@ -9,14 +9,15 @@
 //!   - Horizonte de DIAS dias. Cada pedido chega num dia e tem uma janela [dia, dia+folga].
 //!     Folga 0 = "tem que sair no mesmo dia".
 //!   - Frota limitada de caminhões/dia. Cada caminhão faz várias viagens no dia, desde que a soma
-//!     caiba na jornada (empacotamento First-Fit Decreasing das viagens nos caminhões).
+//!     caiba na jornada (empacotamento First-Fit Decreasing das viagens nos caminhões, conferido
+//!     de forma exata quando o FFD fica acima do mínimo teórico).
 //!   - Custo = diesel (depende da velocidade média do trecho e da carga) + hora motorista
 //!     + custo fixo por caminhão usado no dia.
 //!
 //! Políticas comparadas:
 //!   A) Manual: tudo no dia do pedido, rota "vai no mais perto" (o que se faz hoje)
 //!   A2) Manual por região: tudo no dia do pedido, caminhões enchidos por direção a partir do depósito
-//!   B) Otimizado, tudo no mesmo dia
+//!   B) Otimizado, tudo no mesmo dia (método exato por dia quando o dia tem até 16 pedidos)
 //!   C) Otimizado com X% dos pedidos aceitando até folga_dias de espera (curva 0..100%)
 
 use std::fmt::Write as _;
@@ -48,6 +49,10 @@ struct Premissas {
     // escolher o plano. 1 e 1 = custo real em R$. Variáveis de ambiente PESO_DIESEL e PESO_TEMPO.
     peso_diesel: f64,
     peso_tempo: f64,
+    // Parâmetros do algoritmo (variáveis de ambiente ILS_ITERS e BLOCOS), só para experimentos.
+    ils_iters: usize,
+    blocos: bool,
+    exato_dia: bool, // EXATO_DIA=0 desliga o método exato por dia (volta a usar só a busca local)
 }
 
 static PREM: OnceLock<Premissas> = OnceLock::new();
@@ -96,12 +101,16 @@ fn ler_premissas(raiz: &PathBuf) -> Premissas {
         deposito_lon: pega("deposito_lon"),
         peso_diesel: env("PESO_DIESEL").unwrap_or(1.0),
         peso_tempo: env("PESO_TEMPO").unwrap_or(1.0),
+        ils_iters: env("ILS_ITERS").map(|x| x as usize).unwrap_or(ILS_ITERS),
+        blocos: env("BLOCOS").map(|x| x != 0.0).unwrap_or(BLOCOS),
+        exato_dia: env("EXATO_DIA").map(|x| x != 0.0).unwrap_or(true),
     };
     assert!(v.is_empty(), "premissas.toml: chave desconhecida: {}", v[0].0);
     pr
 }
 
-const ILS_ITERS: usize = 300;
+const ILS_ITERS: usize = 1000; // 300 deixava 2 de 20 semanas pequenas acima do ótimo; ver scripts/exato_frota.py --semanas
+const BLOCOS: bool = false; // movimentos de bloco na busca local (ver Fase 4: não compensaram)
 const PENALIDADE: f64 = 50_000.0;
 
 // ---------------- Utilidades ----------------
@@ -245,7 +254,30 @@ fn caminhoes_no_dia(horas: &mut Vec<f64>) -> usize {
             None => bins.push(h),
         }
     }
-    bins.len()
+    // O FFD é uma heurística e às vezes usa um caminhão a mais. Se ele ficou acima do mínimo
+    // teórico, confere de forma exata (poucas viagens por dia) se dá para usar menos.
+    let mut k = bins.len();
+    let soma: f64 = horas.iter().sum();
+    let minimo = (((soma - 1e-9) / jornada).ceil().max(0.0) as usize).max(horas.iter().filter(|&&h| h > jornada / 2.0 + 1e-9).count());
+    while k > minimo && k > 1 && horas.len() <= 14 && cabe_em(horas, 0, &mut vec![0.0; k - 1], jornada) {
+        k -= 1;
+    }
+    k
+}
+
+/// Empacotamento exato: as viagens horas[i..] (em ordem decrescente) cabem nos caminhões `bins`?
+fn cabe_em(horas: &[f64], i: usize, bins: &mut Vec<f64>, jornada: f64) -> bool {
+    if i == horas.len() { return true; }
+    let mut vistos: Vec<f64> = Vec::with_capacity(bins.len());
+    for b in 0..bins.len() {
+        let c = bins[b];
+        if c + horas[i] > jornada + 1e-9 || vistos.iter().any(|&v| (v - c).abs() < 1e-12) { continue; }
+        vistos.push(c);
+        bins[b] = c + horas[i];
+        if cabe_em(horas, i + 1, bins, jornada) { return true; }
+        bins[b] = c;
+    }
+    false
 }
 
 fn custo_dia(inst: &Inst, dia: &[Vec<usize>]) -> f64 {
@@ -566,8 +598,110 @@ fn busca_local(inst: &Inst, s: &mut Sol) {
                 }
             }
         }
+        // 4) movimentos maiores: troca de caudas entre viagens e mudança de blocos de 2 ou 3 pedidos
+        if p().blocos && movimentos_de_bloco(inst, s, &mut avs) { melhorou = true; }
         if !melhorou { break; }
     }
+}
+
+/// Tenta trocar as viagens (d1,t1) e (d2,t2) por `na` e `nb`. Aplica se o custo cair. Uma das duas pode ficar vazia.
+fn tenta_par(inst: &Inst, s: &mut Sol, avs: &mut Vec<Vec<Av>>, d1: usize, t1: usize, na: Vec<usize>, d2: usize, t2: usize, nb: Vec<usize>) -> bool {
+    let (aa, ab) = (avalia_viagem(inst, &na), avalia_viagem(inst, &nb));
+    if !(aa.ok && ab.ok) { return false; }
+    let delta = if d1 == d2 {
+        custo_dia_mod(&avs[d1], &[(t1, aa), (t2, ab)], None) - custo_dia_avs(avs[d1].iter())
+    } else {
+        custo_dia_mod(&avs[d1], &[(t1, aa)], None) + custo_dia_mod(&avs[d2], &[(t2, ab)], None)
+            - custo_dia_avs(avs[d1].iter()) - custo_dia_avs(avs[d2].iter())
+    };
+    if delta >= -1e-6 { return false; }
+    s[d1][t1] = na; s[d2][t2] = nb; avs[d1][t1] = aa; avs[d2][t2] = ab;
+    for d in [d1, d2] {
+        let mut t = 0;
+        while t < s[d].len() {
+            if s[d][t].is_empty() { s[d].remove(t); avs[d].remove(t); } else { t += 1; }
+        }
+    }
+    true
+}
+
+/// Vizinhanças maiores que "mudar um pedido" e "trocar dois":
+///   a) troca de caudas (2-opt*): corta duas viagens e troca os finais;
+///   b) bloco de 2 ou 3 pedidos seguidos muda de viagem (na ordem ou invertido);
+///   c) bloco de 1 a 3 pedidos muda de lugar dentro da própria viagem.
+/// Entre dias diferentes, só se a janela de todos os pedidos movidos permitir.
+fn movimentos_de_bloco(inst: &Inst, s: &mut Sol, avs: &mut Vec<Vec<Av>>) -> bool {
+    let cabe = |v: &[usize], d: usize| v.iter().all(|&x| inst.janela[x].0 <= d && d <= inst.janela[x].1);
+    let mut melhorou = false;
+    'reinicia: loop {
+        // c) dentro da mesma viagem
+        for d in 0..s.len() {
+            for t in 0..s[d].len() {
+                let v = s[d][t].clone();
+                let base = custo_dia_avs(avs[d].iter());
+                for len in 1..=3usize.min(v.len().saturating_sub(1)) {
+                    for i in 0..=(v.len() - len) {
+                        let bloco = &v[i..i + len];
+                        let resto: Vec<usize> = [&v[..i], &v[i + len..]].concat();
+                        for q in 0..=resto.len() {
+                            if q == i { continue; }
+                            for inv in [false, true] {
+                                if inv && len == 1 { continue; }
+                                let mut b: Vec<usize> = bloco.to_vec();
+                                if inv { b.reverse(); }
+                                let nv: Vec<usize> = [&resto[..q], &b[..], &resto[q..]].concat();
+                                let a = avalia_viagem(inst, &nv);
+                                if a.ok && custo_dia_mod(&avs[d], &[(t, a)], None) < base - 1e-6 {
+                                    s[d][t] = nv; avs[d][t] = a; melhorou = true;
+                                    continue 'reinicia;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        let viagens: Vec<(usize, usize)> = (0..s.len()).flat_map(|d| (0..s[d].len()).map(move |t| (d, t))).collect();
+        for x in 0..viagens.len() {
+            for y in (x + 1)..viagens.len() {
+                let ((d1, t1), (d2, t2)) = (viagens[x], viagens[y]);
+                let (va, vb) = (s[d1][t1].clone(), s[d2][t2].clone());
+                // a) troca de caudas
+                for i in 0..=va.len() {
+                    for j in 0..=vb.len() {
+                        if (i == va.len() && j == vb.len()) || (i == 0 && j == 0) { continue; }
+                        if d1 != d2 && !(cabe(&va[i..], d2) && cabe(&vb[j..], d1)) { continue; }
+                        let na: Vec<usize> = [&va[..i], &vb[j..]].concat();
+                        let nb: Vec<usize> = [&vb[..j], &va[i..]].concat();
+                        if tenta_par(inst, s, avs, d1, t1, na, d2, t2, nb) { melhorou = true; continue 'reinicia; }
+                    }
+                }
+                // b) bloco de 2 ou 3 pedidos de uma viagem para a outra (nos dois sentidos)
+                for troca in [false, true] {
+                    let (o, de, od, dd) = if troca { (&vb, &va, d2, d1) } else { (&va, &vb, d1, d2) };
+                    for len in 2..=3usize.min(o.len()) {
+                        for i in 0..=(o.len() - len) {
+                            let bloco = &o[i..i + len];
+                            if od != dd && !cabe(bloco, dd) { continue; }
+                            let no: Vec<usize> = [&o[..i], &o[i + len..]].concat();
+                            for q in 0..=de.len() {
+                                for inv in [false, true] {
+                                    let mut b: Vec<usize> = bloco.to_vec();
+                                    if inv { b.reverse(); }
+                                    let nd: Vec<usize> = [&de[..q], &b[..], &de[q..]].concat();
+                                    let ok = if troca { tenta_par(inst, s, avs, d1, t1, nd, d2, t2, no.clone()) }
+                                             else { tenta_par(inst, s, avs, d1, t1, no.clone(), d2, t2, nd) };
+                                    if ok { melhorou = true; continue 'reinicia; }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        break;
+    }
+    melhorou
 }
 
 fn ils(inst: &Inst, inicial: Sol, iters: usize, seed: u64) -> Sol {
@@ -604,7 +738,185 @@ fn ils(inst: &Inst, inicial: Sol, iters: usize, seed: u64) -> Sol {
 
 fn otimiza(inst: &Inst, partida: Option<Sol>, seed: u64) -> Sol {
     let ini = partida.unwrap_or_else(|| (0..inst.dias).map(|d| clarke_wright(inst, &pedidos_do_dia(inst, d))).collect());
-    ils(inst, ini, ILS_ITERS, seed)
+    ils(inst, ini, p().ils_iters, seed)
+}
+
+// ---------------- Exato por dia (programação dinâmica) ----------------
+// Para um dia com poucos pedidos dá para enumerar tudo e ter o ótimo provado:
+//   1) para cada conjunto de pedidos que cabe num caminhão, todas as ordens de visita não
+//      dominadas em (custo, horas). A carga em cada trecho só depende de quem falta entregar,
+//      então a recorrência sobre "conjunto que falta + onde estou" é exata;
+//   2) para cada conjunto U, o "dia de caminhão" mais barato que atende exatamente U
+//      (uma ou mais viagens do mesmo caminhão, somando no máximo a jornada);
+//   3) a melhor partição dos pedidos do dia em dias de caminhão, com no máximo `frota` caminhões.
+// O scripts/exato_frota.py faz a mesma conta de forma independente (em Python, com o HiGHS no
+// passo 3) e os dois têm que dar o mesmo custo.
+const EXATO_MAX: usize = 16; // acima disso o dia vai para a busca local (3^n cresce rápido)
+
+#[derive(Clone, Copy)]
+struct Rot { c: f64, h: f64, a: u32, b: u32, k: u32 }
+
+fn pareto(mut v: Vec<Rot>) -> Vec<Rot> {
+    v.sort_by(|x, y| x.c.partial_cmp(&y.c).unwrap().then(x.h.partial_cmp(&y.h).unwrap()));
+    let mut out: Vec<Rot> = vec![];
+    let mut melhor_h = f64::INFINITY;
+    for r in v {
+        if r.h < melhor_h - 1e-12 { melhor_h = r.h; out.push(r); }
+    }
+    out
+}
+
+/// Ótimo de um dia: devolve as viagens, ou None se o dia é grande demais ou não cabe na frota.
+fn exato_dia(inst: &Inst, cli: &[usize]) -> Option<Vec<Vec<usize>>> {
+    let n = cli.len();
+    if n == 0 { return Some(vec![]); }
+    if n > EXATO_MAX { return None; }
+    let p = p();
+    let (q, j) = (p.capacidade_t, p.jornada_h);
+    let nm = 1usize << n;
+    const NADA: u32 = u32::MAX;
+    let mut carga = vec![0.0f64; nm];
+    for m in 1..nm {
+        let b = m.trailing_zeros() as usize;
+        carga[m] = carga[m & (m - 1)] + inst.ped[cli[b]].demanda;
+    }
+    let arco = |de: usize, para: usize, carga_t: f64| -> (f64, f64) {
+        let litros = inst.litros_vazio[de][para] * (1.0 + p.alpha_carga * carga_t / q);
+        let h = inst.h_cam[de][para];
+        (p.peso_diesel * (litros * p.diesel_rs_l), h)
+    };
+    let custo_h = |h: f64| p.peso_tempo * (h * p.motorista_rs_h);
+    // 1) g[m][u]: chegando em u, faltando entregar m (que contém u), até voltar ao depósito
+    let mut g: Vec<Vec<Vec<Rot>>> = vec![vec![]; nm];
+    let mut viagens: Vec<Vec<Rot>> = vec![vec![]; nm];
+    for m in 1..nm {
+        if carga[m] > q + 1e-9 { continue; }
+        let mut gm: Vec<Vec<Rot>> = vec![vec![]; n];
+        for u in 0..n {
+            if m >> u & 1 == 0 { continue; }
+            let rem = m ^ (1 << u);
+            if rem == 0 {
+                let (cd, h) = arco(cli[u], 0, 0.0);
+                let ht = p.descarga_h + h;
+                gm[u] = vec![Rot { c: cd + custo_h(ht), h: ht, a: NADA, b: 0, k: 0 }];
+            } else {
+                let mut labs = vec![];
+                for v in 0..n {
+                    if rem >> v & 1 == 0 || g[rem].is_empty() { continue; }
+                    let (cd, h) = arco(cli[u], cli[v], carga[rem]);
+                    let ht = p.descarga_h + h;
+                    for (k, l) in g[rem][v].iter().enumerate() {
+                        if ht + l.h <= j + 1e-9 {
+                            labs.push(Rot { c: cd + custo_h(ht) + l.c, h: ht + l.h, a: v as u32, b: 0, k: k as u32 });
+                        }
+                    }
+                }
+                gm[u] = pareto(labs);
+            }
+        }
+        let mut labs = vec![];
+        for u in 0..n {
+            let (cd, h) = arco(0, cli[u], carga[m]);
+            let ht = p.carregar_h + h;
+            for (k, l) in gm[u].iter().enumerate() {
+                if ht + l.h <= j + 1e-9 {
+                    labs.push(Rot { c: cd + custo_h(ht) + l.c, h: ht + l.h, a: u as u32, b: 0, k: k as u32 });
+                }
+            }
+        }
+        g[m] = gm;
+        viagens[m] = pareto(labs);
+    }
+    // 2) dia[u]: dias de caminhão não dominados que atendem exatamente u (a = viagem, k = rótulo da viagem, b = rótulo do resto)
+    let mut dia: Vec<Vec<Rot>> = vec![vec![]; nm];
+    dia[0] = vec![Rot { c: 0.0, h: 0.0, a: NADA, b: 0, k: 0 }];
+    for u in 1..nm {
+        let a = u & u.wrapping_neg();
+        let resto = u ^ a;
+        let mut sub = resto;
+        let mut labs = vec![];
+        loop {
+            let sv = sub | a;
+            if !viagens[sv].is_empty() && !dia[u ^ sv].is_empty() {
+                for (iv, v) in viagens[sv].iter().enumerate() {
+                    for (ir, r) in dia[u ^ sv].iter().enumerate() {
+                        if v.h + r.h <= j + 1e-9 {
+                            labs.push(Rot { c: v.c + r.c, h: v.h + r.h, a: sv as u32, b: ir as u32, k: iv as u32 });
+                        }
+                    }
+                }
+            }
+            if sub == 0 { break; }
+            sub = (sub - 1) & resto;
+        }
+        dia[u] = pareto(labs);
+    }
+    // 3) melhor partição em até kmax caminhões: f[k][m] = menor custo para atender m com no máximo k caminhões
+    let kmax = p.frota.min(n);
+    let mut f = vec![vec![f64::INFINITY; nm]; kmax + 1];
+    let mut escolha = vec![vec![0u32; nm]; kmax + 1];
+    for k in 0..=kmax { f[k][0] = 0.0; }
+    for k in 1..=kmax {
+        for m in 1..nm {
+            let a = m & m.wrapping_neg();
+            let resto = m ^ a;
+            let mut sub = resto;
+            let (mut melhor, mut qual) = (f[k - 1][m], 0u32); // usar menos caminhões também vale
+            loop {
+                let u = sub | a;
+                if !dia[u].is_empty() && f[k - 1][m ^ u].is_finite() {
+                    let c = dia[u][0].c + p.caminhao_rs_dia + f[k - 1][m ^ u];
+                    if c < melhor { melhor = c; qual = u as u32; }
+                }
+                if sub == 0 { break; }
+                sub = (sub - 1) & resto;
+            }
+            f[k][m] = melhor;
+            escolha[k][m] = qual;
+        }
+    }
+    if !f[kmax][nm - 1].is_finite() { return None; }
+    // reconstrução
+    let mut out = vec![];
+    let (mut k, mut m) = (kmax, nm - 1);
+    while m != 0 {
+        let u = escolha[k][m] as usize;
+        if u == 0 { k -= 1; continue; }
+        let (mut uu, mut lab) = (u, dia[u][0]);
+        while uu != 0 {
+            let sv = lab.a as usize;
+            let v = viagens[sv][lab.k as usize];
+            let (mut mm, mut x, mut kk) = (sv, v.a, v.k as usize);
+            let mut seq = vec![];
+            while x != NADA {
+                seq.push(cli[x as usize]);
+                let l = g[mm][x as usize][kk];
+                mm ^= 1 << x;
+                x = l.a; kk = l.k as usize;
+            }
+            out.push(seq);
+            uu ^= sv;
+            lab = dia[uu][lab.b as usize];
+        }
+        m ^= u;
+        k -= 1;
+    }
+    Some(out)
+}
+
+/// Política "tudo no mesmo dia": cada dia é independente. Dias pequenos saem do método exato;
+/// se algum dia for grande demais, o plano todo ainda passa pela busca local. Devolve o plano e
+/// quantos dias foram resolvidos de forma exata.
+fn otimiza_mesmo_dia(inst: &Inst, seed: u64) -> (Sol, usize) {
+    let mut exatos = 0;
+    let ini: Sol = (0..inst.dias).map(|d| {
+        let cli = pedidos_do_dia(inst, d);
+        match exato_dia(inst, &cli) {
+            Some(v) => { exatos += 1; v }
+            None => clarke_wright(inst, &cli),
+        }
+    }).collect();
+    if exatos == inst.dias { (ini, exatos) } else { (ils(inst, ini, p().ils_iters, seed), exatos) }
 }
 
 // ---------------- Validação ----------------
@@ -727,13 +1039,15 @@ fn main() {
     let a2 = manual_regiao(&inst);
     valida(&inst, &a2, "A2");
     let ra2 = resume(&inst, &a2, "A2) Manual por região, tudo no mesmo dia", 0.0);
-    let b = otimiza(&inst, None, 1);
+    let (b, dias_exatos) = if p.exato_dia { otimiza_mesmo_dia(&inst, 1) } else { (otimiza(&inst, None, 1), 0) };
     valida(&inst, &b, "B");
     let rb = resume(&inst, &b, "B) Otimizado, tudo no mesmo dia", 0.0);
 
     let mut curva = vec![];
     let mut sols = vec![];
-    for (k, &f) in [0.25, 0.5, 0.75, 1.0].iter().enumerate() {
+    // SO_MESMO_DIA=1 pula as políticas com espera (usado pelo scripts/pareto.py, que só olha a B)
+    let fracoes: &[f64] = if std::env::var("SO_MESMO_DIA").map(|v| v == "1").unwrap_or(false) { &[] } else { &[0.25, 0.5, 0.75, 1.0] };
+    for (k, &f) in fracoes.iter().enumerate() {
         define_janelas(&mut inst, f);
         let s = otimiza(&inst, Some(b.clone()), 10 + k as u64);
         valida(&inst, &s, "C");
@@ -764,7 +1078,8 @@ fn main() {
             r.nome, r.km, r.litros, r.h, r.viagens, r.custo, (r.custo / ra.custo - 1.0) * 100.0, (r.custo / ra2.custo - 1.0) * 100.0, r.mesmo_dia,
             r.cam_dia.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(" "));
     }
-    println!("\nValidação: {} viagens de B conferidas por força bruta, maior gap {:.3}%", checadas, gap * 100.0);
+    println!("\nPolítica B: {} de {} dias resolvidos pelo método exato (ótimo provado); os outros, pela busca local.", dias_exatos, inst.dias);
+    println!("Validação: {} viagens de B conferidas por força bruta, maior gap {:.3}%", checadas, gap * 100.0);
     println!("Todas as soluções: cada pedido entregue 1x, dentro da janela, frota e jornada respeitadas.");
 
     // JSON para o mapa
@@ -781,8 +1096,8 @@ fn main() {
     js.push_str("],\"base_regiao\":");
     define_janelas(&mut inst, 0.0);
     js.push_str(&json_sol(&inst, &a2, &ra2));
-    let _ = write!(js, r#","parametros":{{"capacidade_t":{},"jornada_h":{},"frota":{},"folga_dias":{},"diesel_rs_l":{},"motorista_rs_h":{},"caminhao_rs_dia":{},"fator_caminhao":{},"peso_diesel":{},"peso_tempo":{}}},"fora":{:?},"dias":{}}}"#,
-        p.capacidade_t, p.jornada_h, p.frota, p.folga_dias, p.diesel_rs_l, p.motorista_rs_h, p.caminhao_rs_dia, p.fator_caminhao, p.peso_diesel, p.peso_tempo,
+    let _ = write!(js, r#","parametros":{{"capacidade_t":{},"jornada_h":{},"frota":{},"folga_dias":{},"diesel_rs_l":{},"motorista_rs_h":{},"caminhao_rs_dia":{},"fator_caminhao":{},"peso_diesel":{},"peso_tempo":{}}},"dias_exatos":{},"fora":{:?},"dias":{}}}"#,
+        p.capacidade_t, p.jornada_h, p.frota, p.folga_dias, p.diesel_rs_l, p.motorista_rs_h, p.caminhao_rs_dia, p.fator_caminhao, p.peso_diesel, p.peso_tempo, dias_exatos,
         (1..inst.ped.len()).filter(|&i| !inst.ativo[i]).collect::<Vec<_>>(), inst.dias);
     fs::create_dir_all(raiz.join("saida")).unwrap();
     fs::write(raiz.join("saida/resultado.json"), js).unwrap();

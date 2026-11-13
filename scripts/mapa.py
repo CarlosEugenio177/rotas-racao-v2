@@ -81,9 +81,20 @@ def main():
                                "custo_hoje": w["bases"][forte]["custo"], "custo_outra": w["bases"][outra]["custo"],
                                "cam": [max(w["bases"][forte]["caminhoes_dia"]), max(w["politicas"][0]["caminhoes_dia"])],
                                "eco": eco(w, forte), "eco_outra": eco(w, outra)} for w in sm["semanas"]]
+    # ótimo provado com frota (scripts/exato_frota.py grava saida/exato_frota.json e saida/exato_semanas.json)
+    prova = None
+    arq_ef, arq_es = RAIZ / "saida/exato_frota.json", RAIZ / "saida/exato_semanas.json"
+    if arq_ef.exists():
+        ef = json.load(open(arq_ef, encoding="utf-8"))
+        sem_plano = lambda l: {k: v for k, v in l.items() if k != "plano_exato"}
+        prova = {"dias": [sem_plano(l) for l in ef["mesmo_dia"]], "semana": ef["semana"],
+                 "flex": sem_plano(ef["flexivel_pequena"]), "conferencia": ef["conferencia"], "semanas": None}
+        if arq_es.exists():
+            es = json.load(open(arq_es, encoding="utf-8"))
+            prova["semanas"] = {"mesmo_dia": es["mesmo_dia"], "flexivel": es["flexivel"]}
     html = (RAIZ / "scripts/mapa_template.html").read_text(encoding="utf-8")
     html = html.replace("/*DADOS*/null", json.dumps({"res": res, "pontos": pontos, "osrm": OSRM,
-                                                    "exato": sorted(exato, key=lambda l: l["n"]), "diesel": diesel, "semanas": semanas, "pareto": pareto}, ensure_ascii=False))
+                                                    "exato": sorted(exato, key=lambda l: l["n"]), "diesel": diesel, "semanas": semanas, "pareto": pareto, "prova": prova}, ensure_ascii=False))
     (RAIZ / "saida/mapa.html").write_text(html, encoding="utf-8")
     print("Mapa salvo em saida/mapa.html")
 
