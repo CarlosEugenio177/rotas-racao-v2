@@ -22,6 +22,7 @@ header p{margin:0;color:var(--mut);max-width:760px}
 .mini span{font-size:12.5px;color:var(--mut)}
 h2{font-size:18px;margin:32px 0 12px}
 .passos{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.passos.q4{grid-template-columns:repeat(4,1fr)}
 .passo{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:18px;position:relative}
 .passo .n{font-size:12px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
 .passo h3{margin:4px 0 6px;font-size:16px}
@@ -76,7 +77,8 @@ details ul{margin:10px 0 0;padding-left:18px;color:var(--mut)}
 #sm-graf svg{width:100%;height:auto;display:block;max-width:760px}
 #sm-graf .bar:hover{opacity:.7}
 code{font-size:12.5px;background:var(--bg);padding:0 4px;border-radius:4px}
-@media(max-width:900px){.hero,.explora,.passos,.como,.ex-grid{grid-template-columns:1fr}.mini{grid-template-columns:repeat(3,1fr)}#map{height:420px}.hero .big{font-size:36px}}
+@media(max-width:1100px){.passos.q4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.hero,.explora,.passos,.passos.q4,.como,.ex-grid{grid-template-columns:1fr}.mini{grid-template-columns:repeat(3,1fr)}#map{height:420px}.hero .big{font-size:36px}}
 </style></head><body>
 <div class="wrap">
 <header>
@@ -122,7 +124,7 @@ code{font-size:12.5px;background:var(--bg);padding:0 4px;border-radius:4px}
     <div class="seg" id="dias"></div>
     <hr class="sep">
     <table class="cmp" id="cmp"></table>
-    <label class="toggle"><input type="checkbox" id="vhoje"> Mostrar no mapa as rotas de hoje (cinza)</label>
+    <label class="toggle"><input type="checkbox" id="vhoje"> Mostrar no mapa as rotas do jeito de hoje (cinza)</label>
   </div>
   <div>
     <div id="map"></div>
@@ -187,7 +189,14 @@ if(typeof L==="undefined"){
   window.L={map:()=>c,tileLayer:()=>c,layerGroup:()=>c,polyline:()=>c,circleMarker:()=>c,marker:()=>c};
   document.getElementById("map").innerHTML='<div style="padding:40px;color:#78716c">O mapa precisa de internet para carregar.</div>';
 }
-const P=D.res.politicas, HOJE=P[0], OTIM=P[1], PAR=D.res.parametros;
+const P=D.res.politicas, OTIM=P[1], PAR=D.res.parametros;
+// Dois "jeitos de hoje": manual simples (vai no mais perto) e manual por região. A página mede a
+// economia contra o mais forte (o mais barato na média das semanas simuladas).
+const SIMPLES=P[0], REGIAO=D.res.base_regiao||null;
+const FORTE=!REGIAO?"simples":D.semanas?D.semanas.base_forte:(REGIAO.custo<SIMPLES.custo?"regiao":"simples");
+const HOJE=FORTE==="regiao"?REGIAO:SIMPLES, OUTRA=!REGIAO?null:(FORTE==="regiao"?SIMPLES:REGIAO);
+const NOME_BASE={simples:"indo sempre na fazenda mais perto",regiao:"separando os pedidos por região"};
+const pc=v=>v<10?v.toFixed(1).replace(".",","):String(Math.round(v));
 const cores=["#2563eb","#dc2626","#16a34a","#9333ea","#ea580c","#0891b2","#be185d","#4d7c0f","#b45309","#4338ca"];
 const brl=v=>"R$ "+Math.round(v).toLocaleString("pt-BR");
 const n0=v=>Math.round(v).toLocaleString("pt-BR");
@@ -203,7 +212,7 @@ if(SM){
   // manchete: média das semanas simuladas, não uma semana só
   const rB=SM.resumo[0], e=rB.economia_pct;
   document.getElementById("h-big").innerHTML=`${brl(rB.economia_rs.media)} <small>por semana, em média</small>`;
-  document.getElementById("h-txt").innerHTML=`É quanto se economiza só planejando melhor as rotas, entregando <b>tudo no mesmo dia</b>, como hoje. É uma <b>economia de ${Math.round(e.media)}%</b> no custo das entregas (entre ${Math.round(e.min)}% e ${Math.round(e.max)}% em ${SM.n} semanas simuladas), cerca de <b>${brl(rB.economia_rs.media*SEMANAS_MES)} por mês</b>.`;
+  document.getElementById("h-txt").innerHTML=`É quanto se economiza só planejando melhor as rotas, entregando <b>tudo no mesmo dia</b>, como hoje. É uma <b>economia de ${pc(e.media)}%</b> no custo das entregas (entre ${pc(e.min)}% e ${pc(e.max)}% em ${SM.n} semanas simuladas), cerca de <b>${brl(rB.economia_rs.media*SEMANAS_MES)} por mês</b>. A comparação é com um despacho feito à mão ${NOME_BASE[FORTE]}.`;
   document.getElementById("h-mini").innerHTML=
     `<div><b>${n0(rB.km.media)} km</b><span>a menos rodados por semana, em média</span></div>
      <div><b>${n0(rB.litros.media)} L</b><span>de diesel economizados por semana</span></div>
@@ -220,11 +229,13 @@ if(SM){
   document.getElementById("sec-semanas").hidden=false;
   const fx=f=>SM.resumo.findIndex(r=>Math.abs(r.flex-f)<0.01&&(f>0||r.nome.startsWith("B")));
   const iB=0, i50=fx(0.5), i100=fx(1);
-  document.getElementById("sm-intro").innerHTML=`Uma semana só pode ser sorte. Por isso sorteamos <b>${SM.n} semanas diferentes</b> de pedidos (fracas, normais e fortes) entre ${SM.fazendas} fazendas, e refizemos a conta em cada uma: o jeito de hoje contra o plano do programa.`;
+  const eO=SM.resumo_outra?SM.resumo_outra[0].economia_pct:null;
+  document.getElementById("sm-intro").innerHTML=`Uma semana só pode ser sorte. Por isso sorteamos <b>${SM.n} semanas diferentes</b> de pedidos (fracas, normais e fortes) entre ${SM.fazendas} fazendas, e refizemos a conta em cada uma: o jeito de hoje contra o plano do programa.`+
+    (eO?`<br><br><b>Contra qual "jeito de hoje"?</b> Simulamos dois. No simples, o motorista vai sempre na fazenda mais perto. No organizado, o despachante separa os pedidos do dia por região, enche um caminhão por região e entrega do mais perto ao mais longe, ou o contrário. O organizado saiu mais barato em ${SM.regiao_ganha_em} das ${SM.n} semanas, então <b>toda a página mede a economia contra ele</b>, que é o adversário mais difícil. Contra o jeito simples, a economia das rotas planejadas seria de ${pc(eO.media)}% em média (entre ${pc(eO.min)}% e ${pc(eO.max)}%).`:"");
   const card=(i,n,t,d)=>{const r=SM.resumo[i],e=r.economia_pct;return `
     <div class="passo"><div class="n">${n}</div><h3>${t}</h3><p>${d}</p>
-      <div class="valor">${Math.round(e.media)}% <span style="font-size:14px;font-weight:500;color:var(--mut)">mais barato, em média</span></div>
-      <div class="delta" style="color:var(--mut);font-weight:500">entre ${Math.round(e.min)}% e ${Math.round(e.max)}%, conforme a semana</div>
+      <div class="valor">${pc(e.media)}% <span style="font-size:14px;font-weight:500;color:var(--mut)">mais barato, em média</span></div>
+      <div class="delta" style="color:var(--mut);font-weight:500">entre ${pc(e.min)}% e ${pc(e.max)}%, conforme a semana</div>
       <div style="font-size:12.5px;color:var(--mut);margin-top:8px">${brl(r.economia_rs.media)} por semana, em média (de ${brl(r.economia_rs.min)} a ${brl(r.economia_rs.max)})</div></div>`};
   document.getElementById("sm-cards").innerHTML=
     card(iB,"Passo 1","Rotas planejadas","Tudo entregue no mesmo dia, como hoje. Só muda quem vai junto e em que ordem.")+
@@ -254,28 +265,32 @@ if(SM){
     (SM.frota_livre?` Em ${SM.frota_livre} das ${SM.n} semanas, o jeito de hoje precisaria de mais de ${frota} caminhões em algum dia. Nessas semanas a conta deixa os dois lados usar caminhão extra, pagando o mesmo valor por dia.`:"");
   const tipo={fraca:"fraca",normal:"normal",forte:"forte"};
   document.getElementById("sm-tab").innerHTML=
-    `<tr><th>Semana</th><th>Tipo</th><th>Pedidos</th><th>Custo do jeito de hoje</th><th>Rotas planejadas</th>${i50>=0?"<th>50% esperando</th>":""}${i100>=0?"<th>Todos esperando</th>":""}<th>Caminhões no pior dia (hoje → planejado)</th></tr>`+
-    SM.semanas.map(w=>`<tr><td>${w.seed}</td><td>${tipo[w.volume]||w.volume}</td><td>${w.pedidos}</td><td>${brl(w.custo_hoje)}</td><td>${p1(w.eco[iB])}% mais barato</td>${i50>=0?`<td>${p1(w.eco[i50])}%</td>`:""}${i100>=0?`<td>${p1(w.eco[i100])}%</td>`:""}<td>${w.cam[0]} → ${w.cam[1]}${w.frota_livre?" *":""}</td></tr>`).join("")+
-    (SM.frota_livre?`<tr><td colspan="8" style="text-align:left;color:var(--mut);border:0">* semana em que o jeito de hoje não coube em ${frota} caminhões; comparada com caminhão extra liberado.</td></tr>`:"");
+    `<tr><th>Semana</th><th>Tipo</th><th>Pedidos</th><th>Custo do jeito de hoje</th><th>Rotas planejadas</th>${i50>=0?"<th>50% esperando</th>":""}${i100>=0?"<th>Todos esperando</th>":""}${eO?"<th>Rotas planejadas contra o jeito simples</th>":""}<th>Caminhões no pior dia (hoje → planejado)</th></tr>`+
+    SM.semanas.map(w=>`<tr><td>${w.seed}</td><td>${tipo[w.volume]||w.volume}</td><td>${w.pedidos}</td><td>${brl(w.custo_hoje)}</td><td>${p1(w.eco[iB])}% mais barato</td>${i50>=0?`<td>${p1(w.eco[i50])}%</td>`:""}${i100>=0?`<td>${p1(w.eco[i100])}%</td>`:""}${eO?`<td>${p1(w.eco_outra[iB])}%</td>`:""}<td>${w.cam[0]} → ${w.cam[1]}${w.frota_livre?" *":""}</td></tr>`).join("")+
+    (SM.frota_livre?`<tr><td colspan="9" style="text-align:left;color:var(--mut);border:0">* semana em que o jeito de hoje não coube em ${frota} caminhões; comparada com caminhão extra liberado.</td></tr>`:"");
   // a semana do mapa é um exemplo, e pode não ser típica
   const eEx=(1-OTIM.custo/HOJE.custo)*100, eM=SM.resumo[iB].economia_pct;
   document.getElementById("h2-exemplo").textContent="Uma semana de exemplo, em detalhe";
   const pe=document.getElementById("p-exemplo");pe.hidden=false;
-  pe.innerHTML=`Esta é a semana que aparece no mapa mais abaixo. Nela as rotas planejadas saíram <b>${Math.round(eEx)}% mais baratas</b>, `+
-    (eEx>eM.media+eM.desvio?`um resultado acima do normal: a média das ${SM.n} semanas é ${Math.round(eM.media)}%.`:eEx<eM.media-eM.desvio?`um resultado abaixo do normal: a média das ${SM.n} semanas é ${Math.round(eM.media)}%.`:`perto da média das ${SM.n} semanas (${Math.round(eM.media)}%).`);
+  pe.innerHTML=`Esta é a semana que aparece no mapa mais abaixo. Nela as rotas planejadas saíram <b>${pc(eEx)}% mais baratas</b> que o jeito de hoje, `+
+    (eEx>eM.media+eM.desvio?`um resultado acima do normal: a média das ${SM.n} semanas é ${pc(eM.media)}%.`:eEx<eM.media-eM.desvio?`um resultado abaixo do normal: a média das ${SM.n} semanas é ${pc(eM.media)}%.`:`perto da média das ${SM.n} semanas (${pc(eM.media)}%).`);
 }
 const meio=P.find(p=>Math.abs(p.flex-0.5)<0.01)||P[P.length-1];
+const DESC_BASE={simples:"Cada pedido sai no mesmo dia. O motorista vai sempre na fazenda mais perto e volta quando o caminhão esvazia.",
+  regiao:"Cada pedido sai no mesmo dia. O despachante separa os pedidos por região, enche um caminhão por região e entrega do mais perto ao mais longe, ou o contrário."};
 const passos=[
-  {p:HOJE,cls:"hoje",n:"Hoje",t:"Como é feito hoje",d:"Cada pedido sai no mesmo dia. O motorista vai sempre na fazenda mais perto e volta quando o caminhão esvazia."},
+  ...(OUTRA?[{p:OUTRA,cls:"hoje",n:"Hoje, sem planejar",t:FORTE==="regiao"?"Indo sempre no mais perto":"Separando por região",d:DESC_BASE[FORTE==="regiao"?"simples":"regiao"]}]:[]),
+  {p:HOJE,cls:"hoje",n:OUTRA?"Hoje, bem feito":"Hoje",t:!OUTRA?"Como é feito hoje":FORTE==="regiao"?"Separando por região":"Indo sempre no mais perto",d:DESC_BASE[FORTE]},
   {p:OTIM,n:"Passo 1",t:"Rotas planejadas",d:"Os mesmos pedidos, também no mesmo dia, mas o computador escolhe quem vai junto e a melhor ordem."},
   {p:meio,n:"Passo 2",t:`${Math.round(meio.flex*100)}% dos clientes aceitam esperar`,d:"Metade dos clientes topa receber em até 2 dias. Assim dá pra juntar mais entregas da mesma região."},
 ];
+if(OUTRA)document.getElementById("passos").classList.add("q4");
 document.getElementById("passos").innerHTML=passos.map(s=>`
   <div class="passo ${s.cls||""}">
     <div class="n">${s.n}</div><h3>${s.t}</h3><p>${s.d}</p>
     <div class="valor">${brl(s.p.custo)}</div>
-    <div class="delta">${s.p===HOJE?'<span style="color:var(--mut)">custo da semana</span>':`${pct(s.p.custo,HOJE.custo)}% mais barato que hoje`}</div>
-    <div class="barra"><i style="width:${(s.p.custo/HOJE.custo*100).toFixed(1)}%"></i></div>
+    <div class="delta">${s.p===HOJE?`<span style="color:var(--mut)">custo da semana${OUTRA?" (base da comparação)":""}</span>`:s.p===OUTRA?`<span style="color:var(--mut)">${s.p.custo>=HOJE.custo?pc((s.p.custo/HOJE.custo-1)*100)+"% mais caro":pc((1-s.p.custo/HOJE.custo)*100)+"% mais barato"} que o bem feito</span>`:`${pc((1-s.p.custo/HOJE.custo)*100)}% mais barato que hoje${OUTRA?" bem feito":""}`}</div>
+    <div class="barra"><i style="width:${Math.min(100,s.p.custo/Math.max(HOJE.custo,OUTRA?OUTRA.custo:0)*100).toFixed(1)}%"></i></div>
     <div style="font-size:12.5px;color:var(--mut);margin-top:8px">${n0(s.p.km)} km · ${s.p.viagens} viagens · ${Math.round(s.p.mesmo_dia_pct)}% entregue no mesmo dia</div>
   </div>`).join("");
 const map=L.map("map",{scrollWheelZoom:false}).setView([-5.2,-42.3],7);
@@ -374,7 +389,8 @@ if(EX.length){
     `<tr><th>Pedidos</th><th>Variáveis binárias</th><th>Restrições</th><th>Ótimo (R$)</th><th>Relaxação LP (R$)</th><th>Distância</th></tr>`+
     EX.map(e=>`<tr><td>${e.n}</td><td>${e.binarias}</td><td>${e.restricoes}</td><td>${brl(e.exato)}</td><td>${brl(e.lp)}</td><td>${virg(((1-e.lp/e.exato)*100).toFixed(1))}%</td></tr>`).join("");
 }
-const DI=[...(D.diesel||[]).filter(x=>Math.abs(x.diesel-PAR.diesel_rs_l)>1e-6),{diesel:PAR.diesel_rs_l,politicas:P,atual:true}]
+const DI=[...(D.diesel||[]).filter(x=>Math.abs(x.diesel-PAR.diesel_rs_l)>1e-6),{diesel:PAR.diesel_rs_l,politicas:P,base_regiao:REGIAO,atual:true}]
+  .filter(x=>FORTE!=="regiao"||x.base_regiao)
   .sort((a,b)=>a.diesel-b.diesel);
 if(DI.length>1){
   document.getElementById("sec-diesel").hidden=false;
@@ -382,7 +398,7 @@ if(DI.length>1){
   const pm=x=>x.politicas.find(p=>Math.abs(p.flex-0.5)<0.01)||x.politicas[x.politicas.length-1];
   document.getElementById("di-tab").innerHTML=
     `<tr><th>Diesel</th><th>Hoje</th><th>Rotas planejadas</th><th>Economia por semana</th><th>Com 50% esperando</th><th>Economia por semana</th></tr>`+
-    DI.map(x=>{const a=x.politicas[0],b=x.politicas[1],c=pm(x);
+    DI.map(x=>{const a=FORTE==="regiao"?x.base_regiao:x.politicas[0],b=x.politicas[1],c=pm(x);
       return `<tr><td>${rs(x.diesel)}/L${x.atual?' <span style="color:var(--mut)">(atual)</span>':""}</td><td>${brl(a.custo)}</td><td>${brl(b.custo)}</td>
         <td class="ok">${brl(a.custo-b.custo)}</td><td>${brl(c.custo)}</td><td class="ok">${brl(a.custo-c.custo)}</td></tr>`}).join("");
   document.getElementById("di-tab").outerHTML=`<div class="tab-wrap">${document.getElementById("di-tab").outerHTML}</div>`;
@@ -393,7 +409,7 @@ document.getElementById("premissas").innerHTML=[
   `Frota de ${PAR.frota} caminhões de ${PAR.capacidade_t} t, com jornada máxima de ${PAR.jornada_h} h por dia, sem pernoite.`,
   `Diesel a R$ ${PAR.diesel_rs_l.toFixed(2).replace(".",",")}/L, motorista a R$ ${PAR.motorista_rs_h}/h e R$ ${PAR.caminhao_rs_dia} por caminhão usado no dia.`,
   `Tempos de viagem calculados para carro e aumentados em ${Math.round((PAR.fator_caminhao-1)*100)}% para caminhão.`,
-  `"Hoje" é uma simulação do jeito comum de rotear (ir no mais perto), não os dados reais da empresa.`,
+  REGIAO?`O "jeito de hoje" é simulado de duas formas (indo sempre no mais perto; separando por região a partir de Teresina). Nenhuma delas são as rotas reais da empresa. A economia é medida contra a mais barata das duas.`:`"Hoje" é uma simulação do jeito comum de rotear (ir no mais perto), não os dados reais da empresa.`,
   SM?`As ${SM.n} semanas simuladas são sorteios entre ${SM.fazendas} fazendas fictícias. As faixas de pedidos por dia (${Object.entries(SM.volumes).map(([k,[a,b]])=>`${k}: ${a} a ${b}`).join("; ")}) foram escolhidas por nós, não medidas.`:"",
   SM&&SM.frota_livre?`Em ${SM.frota_livre} das ${SM.n} semanas simuladas o jeito de hoje não cabe em ${PAR.frota} caminhões em algum dia. Nessas, os dois lados podem usar caminhão extra pelo mesmo custo diário. Isso indica que a frota ou o volume de pedidos da simulação precisam ser conferidos com os números reais.`:"",
   fora.length?`Ficaram de fora ${fora.length} entregas que não cabem numa jornada (precisariam de pernoite): ${fora.join(", ")}.`:"",

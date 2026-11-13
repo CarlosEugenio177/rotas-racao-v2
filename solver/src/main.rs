@@ -15,6 +15,7 @@
 //!
 //! Políticas comparadas:
 //!   A) Manual: tudo no dia do pedido, rota "vai no mais perto" (o que se faz hoje)
+//!   A2) Manual por região: tudo no dia do pedido, caminhões enchidos por direção a partir do depósito
 //!   B) Otimizado, tudo no mesmo dia
 //!   C) Otimizado com X% dos pedidos aceitando até folga_dias de espera (curva 0..100%)
 
@@ -41,6 +42,8 @@ struct Premissas {
     vel_ref_kmh: f64,
     frota: usize,
     folga_dias: usize,
+    deposito_lat: f64,
+    deposito_lon: f64,
 }
 
 static PREM: OnceLock<Premissas> = OnceLock::new();
@@ -85,6 +88,8 @@ fn ler_premissas(raiz: &PathBuf) -> Premissas {
         vel_ref_kmh: pega("vel_ref_kmh"),
         frota: { let a = pega("frota"); inteiro("frota", env("FROTA").unwrap_or(a)) },
         folga_dias: { let a = pega("folga_dias"); inteiro("folga_dias", a) },
+        deposito_lat: pega("deposito_lat"),
+        deposito_lon: pega("deposito_lon"),
     };
     assert!(v.is_empty(), "premissas.toml: chave desconhecida: {}", v[0].0);
     pr
@@ -118,6 +123,8 @@ fn ler_matriz(p: &PathBuf) -> Vec<Vec<f64>> {
 #[derive(Clone)]
 struct Pedido {
     nome: String,
+    lat: f64,
+    lon: f64,
     demanda: f64,
     dia: usize,
     u: f64,
@@ -141,11 +148,13 @@ fn consumo_l_km(vel_kmh: f64) -> f64 {
 
 fn carregar(raiz: &PathBuf) -> Inst {
     let txt = fs::read_to_string(raiz.join("dados/pedidos.csv")).expect("dados/pedidos.csv");
-    let mut ped = vec![Pedido { nome: "Depósito".into(), demanda: 0.0, dia: 0, u: 0.0 }];
+    let mut ped = vec![Pedido { nome: "Depósito".into(), lat: p().deposito_lat, lon: p().deposito_lon, demanda: 0.0, dia: 0, u: 0.0 }];
     for l in txt.lines().skip(1).filter(|l| !l.trim().is_empty()) {
         let c: Vec<&str> = l.split(',').collect();
         ped.push(Pedido {
             nome: c[1].to_string(),
+            lat: c[2].parse().unwrap(),
+            lon: c[3].parse().unwrap(),
             demanda: c[4].parse().unwrap(),
             dia: c[5].parse().unwrap(),
             u: c[6].parse().unwrap(),
@@ -282,6 +291,66 @@ fn manual(inst: &Inst) -> Sol {
                 viagens.push(v);
             }
             viagens
+        })
+        .collect()
+}
+
+/// Direção (ângulo) de cada pedido vista do depósito, para o despacho por região.
+fn angulo(inst: &Inst, i: usize) -> f64 {
+    let (la0, lo0) = (inst.ped[0].lat, inst.ped[0].lon);
+    (inst.ped[i].lat - la0).atan2((inst.ped[i].lon - lo0) * la0.to_radians().cos())
+}
+
+/// Ordena as paradas de uma viagem do mais perto para o mais longe do depósito, ou o contrário:
+/// o que for viável e mais barato. None se nenhum dos dois couber (carga ou jornada).
+fn ordena_perto_longe(inst: &Inst, v: &[usize]) -> Option<Vec<usize>> {
+    let mut ida = v.to_vec();
+    ida.sort_by(|&a, &b| inst.km[0][a].partial_cmp(&inst.km[0][b]).unwrap());
+    let volta: Vec<usize> = ida.iter().rev().cloned().collect();
+    let (ai, av) = (avalia_viagem(inst, &ida), avalia_viagem(inst, &volta));
+    match (ai.ok, av.ok) {
+        (true, true) => Some(if av.custo < ai.custo { volta } else { ida }),
+        (true, false) => Some(ida),
+        (false, true) => Some(volta),
+        _ => None,
+    }
+}
+
+/// "Despacho por região": o jeito organizado de fazer à mão. Varre os pedidos do dia por direção
+/// a partir do depósito (começando depois do maior vão sem pedidos), enche um caminhão com os
+/// vizinhos de direção até não caber mais e ordena cada viagem do mais perto ao mais longe ou o
+/// contrário. Testa a varredura nos dois sentidos e fica com o dia mais barato.
+fn manual_regiao(inst: &Inst) -> Sol {
+    (0..inst.dias)
+        .map(|d| {
+            let mut cli = pedidos_do_dia(inst, d);
+            if cli.is_empty() { return vec![]; }
+            cli.sort_by(|&a, &b| angulo(inst, a).partial_cmp(&angulo(inst, b)).unwrap());
+            let n = cli.len();
+            let (mut ini, mut maior) = (0, -1.0);
+            for k in 0..n {
+                let mut vao = angulo(inst, cli[(k + 1) % n]) - angulo(inst, cli[k]);
+                if k + 1 == n { vao += std::f64::consts::TAU; }
+                if vao > maior { maior = vao; ini = (k + 1) % n; }
+            }
+            let ordem: Vec<usize> = (0..n).map(|k| cli[(ini + k) % n]).collect();
+            let monta = |ordem: &[usize]| -> Vec<Vec<usize>> {
+                let mut viagens = vec![];
+                let mut atual: Vec<usize> = vec![];
+                for &x in ordem {
+                    let mut cand = atual.clone();
+                    cand.push(x);
+                    match ordena_perto_longe(inst, &cand) {
+                        Some(v) => atual = v,
+                        None => { viagens.push(atual); atual = vec![x]; }
+                    }
+                }
+                viagens.push(atual);
+                viagens
+            };
+            let ida = monta(&ordem);
+            let volta = monta(&ordem.iter().rev().cloned().collect::<Vec<_>>());
+            if custo_dia(inst, &volta) < custo_dia(inst, &ida) { volta } else { ida }
         })
         .collect()
 }
@@ -627,6 +696,9 @@ fn main() {
     let a = manual(&inst);
     valida(&inst, &a, "A");
     let ra = resume(&inst, &a, "A) Manual: mais perto, tudo no mesmo dia", 0.0);
+    let a2 = manual_regiao(&inst);
+    valida(&inst, &a2, "A2");
+    let ra2 = resume(&inst, &a2, "A2) Manual por região, tudo no mesmo dia", 0.0);
     let b = otimiza(&inst, None, 1);
     valida(&inst, &b, "B");
     let rb = resume(&inst, &b, "B) Otimizado, tudo no mesmo dia", 0.0);
@@ -657,11 +729,11 @@ fn main() {
     }
 
     println!("\nOtimização em {:.1?} ({} pedidos ativos)\n", tempo, n_ativos);
-    println!("{:<44} {:>7} {:>7} {:>6} {:>6} {:>9} {:>7} {:>9} {:>14}", "Política", "km", "litros", "horas", "viag.", "R$", "Δ", "mesmo dia", "caminhões/dia");
-    let todas: Vec<&Res> = [&ra, &rb].into_iter().chain(curva.iter()).collect();
+    println!("{:<44} {:>7} {:>7} {:>6} {:>6} {:>9} {:>7} {:>8} {:>9} {:>14}", "Política", "km", "litros", "horas", "viag.", "R$", "Δ A", "Δ A2", "mesmo dia", "caminhões/dia");
+    let todas: Vec<&Res> = [&ra, &ra2, &rb].into_iter().chain(curva.iter()).collect();
     for r in &todas {
-        println!("{:<44} {:>7.0} {:>7.0} {:>6.0} {:>6} {:>9.0} {:>6.1}% {:>8.0}% {:>14}",
-            r.nome, r.km, r.litros, r.h, r.viagens, r.custo, (r.custo / ra.custo - 1.0) * 100.0, r.mesmo_dia,
+        println!("{:<44} {:>7.0} {:>7.0} {:>6.0} {:>6} {:>9.0} {:>6.1}% {:>7.1}% {:>8.0}% {:>14}",
+            r.nome, r.km, r.litros, r.h, r.viagens, r.custo, (r.custo / ra.custo - 1.0) * 100.0, (r.custo / ra2.custo - 1.0) * 100.0, r.mesmo_dia,
             r.cam_dia.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(" "));
     }
     println!("\nValidação: {} viagens de B conferidas por força bruta, maior gap {:.3}%", checadas, gap * 100.0);
@@ -678,7 +750,10 @@ fn main() {
         js.push(',');
         js.push_str(&json_sol(&inst, s, &curva[k]));
     }
-    let _ = write!(js, r#"],"parametros":{{"capacidade_t":{},"jornada_h":{},"frota":{},"folga_dias":{},"diesel_rs_l":{},"motorista_rs_h":{},"caminhao_rs_dia":{},"fator_caminhao":{}}},"fora":{:?},"dias":{}}}"#,
+    js.push_str("],\"base_regiao\":");
+    define_janelas(&mut inst, 0.0);
+    js.push_str(&json_sol(&inst, &a2, &ra2));
+    let _ = write!(js, r#","parametros":{{"capacidade_t":{},"jornada_h":{},"frota":{},"folga_dias":{},"diesel_rs_l":{},"motorista_rs_h":{},"caminhao_rs_dia":{},"fator_caminhao":{}}},"fora":{:?},"dias":{}}}"#,
         p.capacidade_t, p.jornada_h, p.frota, p.folga_dias, p.diesel_rs_l, p.motorista_rs_h, p.caminhao_rs_dia, p.fator_caminhao,
         (1..inst.ped.len()).filter(|&i| !inst.ativo[i]).collect::<Vec<_>>(), inst.dias);
     fs::create_dir_all(raiz.join("saida")).unwrap();

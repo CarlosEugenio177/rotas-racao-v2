@@ -26,3 +26,7 @@ vel_ref_kmh = 70.0         # velocidade média (de carro) a partir da qual o tre
 
 [prazo]
 folga_dias = 2             # quantos dias um cliente flexível aceita esperar
+
+[deposito]
+deposito_lat = -5.0892     # Teresina (mesmo ponto de dados/cidades.csv); usado no despacho por região
+deposito_lon = -42.8019

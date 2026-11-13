@@ -47,10 +47,14 @@ cd .. && ./run.sh http://localhost:5000
 | Política | O que é |
 |---|---|
 | A) Manual | tudo entregue no dia do pedido, sempre indo no cliente mais perto (o jeito de hoje) |
+| A2) Manual por região | tudo no dia do pedido; pedidos varridos por direção a partir de Teresina, um caminhão por região, do mais perto ao mais longe ou o contrário (despacho manual bem feito) |
 | B) Otimizado, mesmo dia | mesma regra de prazo, rotas otimizadas (Clarke-Wright + busca local + ILS) |
 | C) X% flexível | X% dos pedidos aceitam até 2 dias de espera; o solver escolhe o dia e a rota |
 
 A curva C mostra **quanto custa a meta de entregar no mesmo dia**.
+
+A economia é medida contra a linha de base **mais forte** (a mais barata na média das semanas simuladas;
+hoje, a A2). Na página, a outra aparece só como comparação.
 
 ## Premissas (`dados/premissas.toml`)
 Caminhão de 12 t, jornada de 13 h (sem pernoite), frota de 5 caminhões, diesel a R$ 7,31/L,

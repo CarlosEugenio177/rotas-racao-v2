@@ -19,7 +19,8 @@ env -u FROTA -u CAMINHAO_RS_DIA "$RAIZ/solver/target/release/solver" "$TMP" > "$
 python3 - "$TMP/saida/resultado.json" "$RAIZ/dados/referencia/esperado.json" "${1:-}" <<'PY'
 import json, sys
 res, arq, modo = sys.argv[1], sys.argv[2], sys.argv[3]
-atual = [{"nome": p["nome"], "custo": p["custo"]} for p in json.load(open(res, encoding="utf-8"))["politicas"]]
+r = json.load(open(res, encoding="utf-8"))
+atual = [{"nome": p["nome"], "custo": p["custo"]} for p in r["politicas"] + [r["base_regiao"]]]
 if modo == "--atualizar":
     json.dump(atual, open(arq, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print(f"Valores esperados atualizados ({len(atual)} políticas) em {arq}")

@@ -33,7 +33,7 @@ def main():
     cache = {tuple(json.loads(k)): g for k, g in todos.get(OSRM, {}).items()}
     total = sum(len(v) for pol in res["politicas"] for v in pol["dias"])
     k = 0
-    for pol in res["politicas"]:
+    for pol in res["politicas"] + ([res["base_regiao"]] if "base_regiao" in res else []):
         for dia in pol["dias"]:
             for v in dia:
                 k += 1
@@ -56,18 +56,24 @@ def main():
     diesel = []
     for arq in sorted((RAIZ / "saida").glob("resultado_diesel_*.json")):
         r = json.load(open(arq, encoding="utf-8"))
-        diesel.append({"diesel": r["parametros"]["diesel_rs_l"],
-                       "politicas": [{k: p[k] for k in ("nome", "flex", "custo", "km", "litros")} for p in r["politicas"]]})
+        enxuga = lambda p: {k: p[k] for k in ("nome", "flex", "custo", "km", "litros")}
+        diesel.append({"diesel": r["parametros"]["diesel_rs_l"], "politicas": [enxuga(p) for p in r["politicas"]],
+                       "base_regiao": enxuga(r["base_regiao"]) if "base_regiao" in r else None})
     # várias semanas simuladas (scripts/semanas.py grava saida/semanas.json)
     arq_sem = RAIZ / "saida/semanas.json"
     semanas = None
     if arq_sem.exists():
         sm = json.load(open(arq_sem, encoding="utf-8"))
-        semanas = {k: sm[k] for k in ("n", "fazendas", "volumes", "frota_livre", "resumo")}
+        # a página mede a economia contra a linha de base forte; a outra aparece só como comparação
+        forte = sm["base_forte"]
+        outra = "simples" if forte == "regiao" else "regiao"
+        eco = lambda w, b: [round((1 - q["custo"] / w["bases"][b]["custo"]) * 100, 2) for q in w["politicas"]]
+        semanas = {k: sm[k] for k in ("n", "fazendas", "volumes", "frota_livre", "base_forte", "regiao_ganha_em", "custo_base")}
+        semanas["resumo"], semanas["resumo_outra"] = sm["resumo"][forte], sm["resumo"][outra]
         semanas["semanas"] = [{"seed": w["seed"], "volume": w["volume"], "pedidos": w["pedidos"], "frota_livre": w["frota_livre"],
-                               "custo_hoje": w["politicas"][0]["custo"],
-                               "cam": [max(w["politicas"][0]["caminhoes_dia"]), max(w["politicas"][1]["caminhoes_dia"])],
-                               "eco": [q["economia_pct"] for q in w["politicas"][1:]]} for w in sm["semanas"]]
+                               "custo_hoje": w["bases"][forte]["custo"], "custo_outra": w["bases"][outra]["custo"],
+                               "cam": [max(w["bases"][forte]["caminhoes_dia"]), max(w["politicas"][0]["caminhoes_dia"])],
+                               "eco": eco(w, forte), "eco_outra": eco(w, outra)} for w in sm["semanas"]]
     html = (RAIZ / "scripts/mapa_template.html").read_text(encoding="utf-8")
     html = html.replace("/*DADOS*/null", json.dumps({"res": res, "pontos": pontos, "osrm": OSRM,
                                                     "exato": sorted(exato, key=lambda l: l["n"]), "diesel": diesel, "semanas": semanas}, ensure_ascii=False))

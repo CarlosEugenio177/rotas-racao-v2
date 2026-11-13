@@ -85,14 +85,13 @@ def uma_semana(seed, fazendas, km, h):
         if res is None:
             raise RuntimeError(f"semana {seed}: falhou mesmo com frota livre:\n{erro}")
         frota_livre = True
-    a = res["politicas"][0]
-    pols = [{"nome": p["nome"], "flex": p["flex"], "custo": p["custo"], "km": p["km"], "litros": p["litros"],
-             "horas": p["horas"], "viagens": p["viagens"], "mesmo_dia_pct": p["mesmo_dia_pct"],
-             "caminhoes_dia": p["caminhoes_dia"], "economia_pct": round((1 - p["custo"] / a["custo"]) * 100, 2)}
-            for p in res["politicas"]]
+    campos = ("nome", "flex", "custo", "km", "litros", "horas", "viagens", "mesmo_dia_pct", "caminhoes_dia")
+    pols = [{k: p[k] for k in campos} for p in res["politicas"]]
+    # duas linhas de base do "jeito de hoje": manual simples (politicas[0]) e manual por região
+    bases = {"simples": pols[0], "regiao": {k: res["base_regiao"][k] for k in campos}}
     return {"seed": seed, "volume": volume, "pedidos": len(pedidos), "fora": len(res["fora"]),
             "toneladas": sum(p["dem"] for p in pedidos), "frota_livre": frota_livre, "motivo_frota": motivo,
-            "frota": res["parametros"]["frota"], "politicas": pols}
+            "frota": res["parametros"]["frota"], "bases": bases, "politicas": pols[1:]}
 
 
 def estat(xs):
@@ -110,36 +109,40 @@ def main():
     with ThreadPoolExecutor(max_workers=max(1, (os.cpu_count() or 2) - 1)) as ex:
         semanas = list(ex.map(lambda s: uma_semana(s, fazendas, km, h), range(s0, s1 + 1)))
 
-    nomes = [p["nome"] for p in semanas[0]["politicas"]]
-    resumo = []
-    for k, nome in enumerate(nomes):
-        if k == 0:
-            continue
-        resumo.append({"nome": nome, "flex": semanas[0]["politicas"][k]["flex"],
-                       "economia_pct": estat([s["politicas"][k]["economia_pct"] for s in semanas]),
-                       "economia_rs": estat([s["politicas"][0]["custo"] - s["politicas"][k]["custo"] for s in semanas]),
-                       "km": estat([s["politicas"][0]["km"] - s["politicas"][k]["km"] for s in semanas]),
-                       "litros": estat([s["politicas"][0]["litros"] - s["politicas"][k]["litros"] for s in semanas]),
-                       "horas": estat([s["politicas"][0]["horas"] - s["politicas"][k]["horas"] for s in semanas]),
-                       "por_volume": {v: estat([s["politicas"][k]["economia_pct"] for s in semanas if s["volume"] == v])
-                                      for v in VOLUMES if any(s["volume"] == v for s in semanas)}})
+    eco = lambda s, b, k: (1 - s["politicas"][k]["custo"] / s["bases"][b]["custo"]) * 100
+    resumo = {}
+    for b in ("simples", "regiao"):
+        resumo[b] = []
+        for k, pol in enumerate(semanas[0]["politicas"]):
+            dif = lambda campo: estat([s["bases"][b][campo] - s["politicas"][k][campo] for s in semanas])
+            resumo[b].append({"nome": pol["nome"], "flex": pol["flex"],
+                              "economia_pct": estat([eco(s, b, k) for s in semanas]),
+                              "economia_rs": dif("custo"), "km": dif("km"), "litros": dif("litros"), "horas": dif("horas"),
+                              "por_volume": {v: estat([eco(s, b, k) for s in semanas if s["volume"] == v])
+                                             for v in VOLUMES if any(s["volume"] == v for s in semanas)}})
+    custo_base = {b: estat([s["bases"][b]["custo"] for s in semanas]) for b in ("simples", "regiao")}
+    # a linha de base "forte" é a mais barata na média: é contra ela que a página mede a economia
+    forte = min(custo_base, key=lambda b: custo_base[b]["media"])
     saida = {"n": len(semanas), "fazendas": len(fazendas), "volumes": {k: list(v) for k, v in VOLUMES.items()},
-             "frota_livre": sum(s["frota_livre"] for s in semanas), "semanas": semanas, "resumo": resumo}
+             "frota_livre": sum(s["frota_livre"] for s in semanas), "base_forte": forte, "custo_base": custo_base,
+             "regiao_ganha_em": sum(s["bases"]["regiao"]["custo"] < s["bases"]["simples"]["custo"] for s in semanas),
+             "semanas": semanas, "resumo": resumo}
     (RAIZ / "saida").mkdir(exist_ok=True)
     json.dump(saida, open(RAIZ / "saida/semanas.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 
-    print(f"{len(semanas)} semanas de {len(fazendas)} fazendas\n")
-    print(f"{'seed':>4} {'volume':<7} {'ped':>4} {'fora':>4} {'t':>6} {'manual R$':>10} " + " ".join(f"{'B' if p['flex']==0 else str(round(p['flex']*100))+'%':>7}" for p in semanas[0]["politicas"][1:]) + "  cam/dia A | B")
+    print(f"{len(semanas)} semanas de {len(fazendas)} fazendas. Economia do plano do mesmo dia (B) contra cada jeito de hoje:\n")
+    print(f"{'seed':>4} {'volume':<7} {'ped':>4} {'fora':>4} {'simples R$':>10} {'região R$':>10} {'B R$':>8} {'B x simples':>12} {'B x região':>11}  cam/dia simples|região|B")
     for s in semanas:
-        a, b = s["politicas"][0], s["politicas"][1]
-        print(f"{s['seed']:>4} {s['volume']:<7} {s['pedidos']:>4} {s['fora']:>4} {s['toneladas']:>6.1f} {a['custo']:>10.0f} "
-              + " ".join(f"{p['economia_pct']:>6.1f}%" for p in s["politicas"][1:])
-              + f"  {max(a['caminhoes_dia'])} | {max(b['caminhoes_dia'])}" + ("  FROTA LIVRE" if s["frota_livre"] else ""))
-    print()
-    for r in resumo:
-        e = r["economia_pct"]
-        print(f"{r['nome']:<40} economia média {e['media']:>5.1f}%  (mín {e['min']:.1f}%, máx {e['max']:.1f}%, desvio {e['desvio']:.1f})  "
-              + "  ".join(f"{v}: {x['media']:.1f}%" for v, x in r["por_volume"].items()))
+        a, r, b = s["bases"]["simples"], s["bases"]["regiao"], s["politicas"][0]
+        print(f"{s['seed']:>4} {s['volume']:<7} {s['pedidos']:>4} {s['fora']:>4} {a['custo']:>10.0f} {r['custo']:>10.0f} {b['custo']:>8.0f} {eco(s, 'simples', 0):>11.1f}% {eco(s, 'regiao', 0):>10.1f}%"
+              + f"  {max(a['caminhoes_dia'])}|{max(r['caminhoes_dia'])}|{max(b['caminhoes_dia'])}" + ("  FROTA LIVRE" if s["frota_livre"] else ""))
+    for b in ("simples", "regiao"):
+        print(f"\nContra o manual {'por região' if b == 'regiao' else 'simples'} (custo médio R$ {custo_base[b]['media']:.0f}/semana){'  <- linha de base forte' if b == forte else ''}:")
+        for r in resumo[b]:
+            e = r["economia_pct"]
+            print(f"  {r['nome']:<40} economia média {e['media']:>5.1f}%  (mín {e['min']:.1f}%, máx {e['max']:.1f}%, desvio {e['desvio']:.1f})  "
+                  + "  ".join(f"{v}: {x['media']:.1f}%" for v, x in r["por_volume"].items()))
+    print(f"\nO manual por região saiu mais barato que o simples em {saida['regiao_ganha_em']} de {len(semanas)} semanas.")
     print(f"\nSemanas em que o plano não coube na frota e rodou com frota livre: {saida['frota_livre']} de {len(semanas)}")
     print("Detalhes em saida/semanas.json")
 
