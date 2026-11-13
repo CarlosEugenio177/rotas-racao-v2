@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rotas de ração — simulação</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--fg:#1c1917;--mut:#78716c;--bd:#e7e5e4;--bg:#fafaf9;--ac:#c2410c}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,-apple-system,sans-serif;color:var(--fg);background:#fff;display:grid;grid-template-columns:400px 1fr;height:100vh}
+aside{overflow:auto;padding:20px;border-right:1px solid var(--bd);background:var(--bg)}
+h1{font-size:17px;margin:0 0 4px}small,.mut{color:var(--mut)}
+#map{height:100vh}
+label{font-size:12px;color:var(--mut);display:block;margin:14px 0 4px;text-transform:uppercase;letter-spacing:.04em}
+select{width:100%;padding:7px;border:1px solid var(--bd);border-radius:6px;background:#fff;font:inherit}
+.dias{display:flex;gap:4px;flex-wrap:wrap}.dias button{flex:1;padding:6px 0;font-size:12.5px!important;border:1px solid var(--bd);background:#fff;border-radius:6px;cursor:pointer;font:inherit}
+.dias button.on{background:var(--fg);color:#fff;border-color:var(--fg)}
+.kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.kpi div{background:#fff;border:1px solid var(--bd);border-radius:8px;padding:8px 10px}
+.kpi b{display:block;font-size:18px}.kpi span{font-size:12px;color:var(--mut)}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}td,th{padding:5px 4px;border-bottom:1px solid var(--bd);text-align:right}td:first-child,th:first-child{text-align:left}
+tr.sel{background:#fff7ed}
+.viag{font-size:12.5px;margin-top:6px;padding:6px 8px;border-left:4px solid;background:#fff;border-radius:4px}
+.aviso{margin-top:14px;font-size:12px;color:var(--mut);border-top:1px solid var(--bd);padding-top:10px}
+@media(max-width:800px){body{grid-template-columns:1fr;grid-template-rows:auto 60vh}#map{height:60vh}}
+</style></head><body>
+<aside>
+<h1>Roteirização de ração — simulação</h1>
+<small id="fonte"></small>
+<label>Política</label><select id="pol"></select>
+<label>Dia</label><div class="dias" id="dias"></div>
+<div class="kpi" id="kpi"></div>
+<label>Comparativo (semana)</label><table id="tab"></table>
+<label>Custo × entregas no mesmo dia</label><svg id="curva" viewBox="0 0 360 170" width="100%"></svg>
+<label>Viagens do dia</label><div id="viagens"></div>
+<div class="aviso">Pedidos e fazendas são fictícios. Tempos do OSRM (perfil carro) × fator caminhão. Consumo estimado pela velocidade média do trecho e pela carga. Ajuste as premissas em solver/src/main.rs.</div>
+</aside>
+<div id="map"></div>
+<script>
+const D=/*DADOS*/null;
+if(typeof L==="undefined"){ // sem internet: painel funciona, mapa avisa
+  const c={addTo(){return c},bindTooltip(){return c},clearLayers(){},setView(){return c},fitBounds(){}};
+  window.L={map:()=>c,tileLayer:()=>c,layerGroup:()=>c,polyline:()=>c,circleMarker:()=>c,marker:()=>c};
+  document.getElementById("map").innerHTML='<div style="padding:40px;color:#78716c">O mapa precisa de internet (Leaflet + OpenStreetMap).</div>';
+}
+const cores=["#2563eb","#dc2626","#16a34a","#9333ea","#ea580c","#0891b2","#be185d","#4d7c0f","#b45309","#4338ca"];
+const brl=v=>"R$ "+Math.round(v).toLocaleString("pt-BR"), n0=v=>Math.round(v).toLocaleString("pt-BR");
+document.getElementById("fonte").textContent="Rotas: "+D.osrm+(D.osrm.includes("127.0.0.1")?" (MOCK — não é estrada real)":"");
+const map=L.map("map").setView([-5.2,-42.3],7);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map);
+const camada=L.layerGroup().addTo(map);
+let pol=1, dia=-1;
+const P=D.res.politicas, base=P[0].custo;
+const sel=document.getElementById("pol");
+P.forEach((p,i)=>sel.add(new Option(p.nome,i)));sel.value=pol;sel.onchange=()=>{pol=+sel.value;render()};
+const dd=document.getElementById("dias");
+const btn=(t,v)=>{const b=document.createElement("button");b.textContent=t;b.onclick=()=>{dia=v;render()};b.dataset.v=v;dd.appendChild(b)};
+btn("Semana",-1);for(let d=0;d<D.res.dias;d++)btn("Dia "+(d+1),d);
+function tabela(){
+  let h="<tr><th>Política</th><th>km</th><th>R$</th><th>Δ</th><th>mesmo dia</th></tr>";
+  P.forEach((p,i)=>{h+=`<tr class="${i==pol?"sel":""}"><td>${i==0?"A) manual":i==1?"B) mesmo dia":"C) "+Math.round(p.flex*100)+"% flexível"}</td><td>${n0(p.km)}</td><td>${brl(p.custo)}</td><td>${((p.custo/base-1)*100).toFixed(1)}%</td><td>${p.mesmo_dia_pct.toFixed(0)}%</td></tr>`});
+  document.getElementById("tab").innerHTML=h;
+}
+function curva(){
+  const pts=P.slice(1).map(p=>[p.mesmo_dia_pct,p.custo]);const all=P.map(p=>p.custo);
+  const ymin=Math.min(...all)*0.95,ymax=Math.max(...all)*1.02;
+  const X=v=>40+(100-v)/50*300, Y=v=>150-(v-ymin)/(ymax-ymin)*130;
+  let s=`<line x1="40" y1="150" x2="350" y2="150" stroke="#d6d3d1"/><line x1="40" y1="10" x2="40" y2="150" stroke="#d6d3d1"/>`;
+  s+=`<line x1="40" x2="350" y1="${Y(base)}" y2="${Y(base)}" stroke="#a8a29e" stroke-dasharray="4 3"/><text x="345" y="${Y(base)-4}" font-size="10" text-anchor="end" fill="#78716c">manual hoje</text>`;
+  s+=`<polyline fill="none" stroke="#c2410c" stroke-width="2" points="${pts.map(p=>X(p[0])+","+Y(p[1])).join(" ")}"/>`;
+  pts.forEach((p,i)=>s+=`<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="4" fill="${i+1==pol?"#1c1917":"#c2410c"}"/>`);
+  [100,75,50].forEach(v=>s+=`<text x="${X(v)}" y="164" font-size="10" text-anchor="middle" fill="#78716c">${v}%</text>`);
+  s+=`<text x="4" y="${Y(ymax)+8}" font-size="10" fill="#78716c">${brl(ymax)}</text><text x="4" y="${Y(ymin)}" font-size="10" fill="#78716c">${brl(ymin)}</text>`;
+  document.getElementById("curva").innerHTML=s;
+}
+function render(){
+  [...dd.children].forEach(b=>b.classList.toggle("on",+b.dataset.v==dia));
+  camada.clearLayers();
+  const p=P[pol];const dias=dia<0?p.dias.map((v,i)=>[i,v]):[[dia,p.dias[dia]]];
+  let km=0,l=0,c=0,nv=0,html="";const bounds=[];let cor=0;
+  dias.forEach(([d,vs])=>vs.forEach(v=>{
+    const col=cores[cor++%cores.length];km+=v.km;l+=v.litros;c+=v.custo;nv++;
+    L.polyline(v.geo,{color:col,weight:4,opacity:.8}).bindTooltip(`Dia ${d+1} · ${v.carga} t · ${n0(v.km)} km · ${v.h.toFixed(1)} h`).addTo(camada);
+    v.geo.forEach(g=>bounds.push(g));
+    html+=`<div class="viag" style="border-color:${col}"><b>Dia ${d+1}</b> · ${v.carga} t · ${n0(v.km)} km · ${v.h.toFixed(1)} h · ${brl(v.custo)}<br><span class="mut">${v.pedidos.map(i=>D.pontos[i].nome).join(" → ")}</span></div>`;
+    v.pedidos.forEach((i,k)=>{const q=D.pontos[i];L.circleMarker([q.lat,q.lon],{radius:6,color:"#fff",weight:2,fillColor:col,fillOpacity:1})
+      .bindTooltip(`${q.nome}<br>${q.dem} t · pedido no dia ${q.dia+1}, entregue no dia ${d+1}${q.snap>1?`<br>${q.snap.toFixed(1)} km até a estrada mapeada`:""}`).addTo(camada)});
+  }));
+  const dep=D.pontos[0];L.marker([dep.lat,dep.lon]).bindTooltip("Depósito — Teresina").addTo(camada);
+  if(bounds.length)map.fitBounds(bounds,{padding:[30,30]});
+  const cam=dia<0?p.caminhoes_dia.join(" · "):p.caminhoes_dia[dia];
+  c+=(dia<0?p.caminhoes_dia.reduce((x,y)=>x+y,0):p.caminhoes_dia[dia])*D.res.parametros.caminhao_rs_dia;
+  document.getElementById("kpi").innerHTML=`<div><b>${brl(c)}</b><span>custo</span></div><div><b>${n0(km)} km</b><span>rodados</span></div><div><b>${n0(l)} L</b><span>diesel</span></div><div><b>${cam}</b><span>caminhões/dia · ${nv} viagens</span></div>`;
+  document.getElementById("viagens").innerHTML=html||'<span class="mut">Nenhuma viagem neste dia.</span>';
+  tabela();curva();
+}
+render();
+</script></body></html>
