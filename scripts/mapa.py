@@ -58,9 +58,19 @@ def main():
         r = json.load(open(arq, encoding="utf-8"))
         diesel.append({"diesel": r["parametros"]["diesel_rs_l"],
                        "politicas": [{k: p[k] for k in ("nome", "flex", "custo", "km", "litros")} for p in r["politicas"]]})
+    # várias semanas simuladas (scripts/semanas.py grava saida/semanas.json)
+    arq_sem = RAIZ / "saida/semanas.json"
+    semanas = None
+    if arq_sem.exists():
+        sm = json.load(open(arq_sem, encoding="utf-8"))
+        semanas = {k: sm[k] for k in ("n", "fazendas", "volumes", "frota_livre", "resumo")}
+        semanas["semanas"] = [{"seed": w["seed"], "volume": w["volume"], "pedidos": w["pedidos"], "frota_livre": w["frota_livre"],
+                               "custo_hoje": w["politicas"][0]["custo"],
+                               "cam": [max(w["politicas"][0]["caminhoes_dia"]), max(w["politicas"][1]["caminhoes_dia"])],
+                               "eco": [q["economia_pct"] for q in w["politicas"][1:]]} for w in sm["semanas"]]
     html = (RAIZ / "scripts/mapa_template.html").read_text(encoding="utf-8")
     html = html.replace("/*DADOS*/null", json.dumps({"res": res, "pontos": pontos, "osrm": OSRM,
-                                                    "exato": sorted(exato, key=lambda l: l["n"]), "diesel": diesel}, ensure_ascii=False))
+                                                    "exato": sorted(exato, key=lambda l: l["n"]), "diesel": diesel, "semanas": semanas}, ensure_ascii=False))
     (RAIZ / "saida/mapa.html").write_text(html, encoding="utf-8")
     print("Mapa salvo em saida/mapa.html")
 

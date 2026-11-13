@@ -11,6 +11,8 @@ solver/                   otimizador em Rust (sem dependências)
 scripts/mapa.py           geometria real das viagens (OSRM /route) + saida/mapa.html (Leaflet)
 scripts/mock_osrm.py      OSRM falso para testar sem internet
 scripts/exato.py          modelo exato (programação inteira) x heurística, em instâncias pequenas
+scripts/gerar_fazendas.py  200 fazendas fixas para sortear várias semanas (dados/semanas/)
+scripts/semanas.py        roda as políticas em 20 semanas sorteadas -> saida/semanas.json
 scripts/regressao.sh      confere se os custos na instância de referência continuam os mesmos
 dados/premissas.toml      capacidade, jornada, frota, preços e consumo (solver e exato.py leem daqui)
 dados/referencia/         cópia congelada dos dados + custos esperados (esperado.json)
@@ -62,6 +64,20 @@ scripts/regressao.sh               # roda o solver em dados/referencia/ e compar
 scripts/regressao.sh --atualizar   # só quando o modelo de custo mudou de propósito; explique no commit
 ```
 O `run.sh` sorteia pedidos novos em `dados/pedidos.csv`; a instância de `dados/referencia/` não muda.
+
+## Várias semanas (a economia é robusta?)
+Uma semana sorteada pode ser sorte. `scripts/semanas.py` sorteia 20 semanas (seeds 1 a 20; fracas, normais
+e fortes) a partir de um conjunto fixo de 200 fazendas fictícias e roda todas as políticas em cada uma.
+Grava `saida/semanas.json`, que a página usa na manchete ("economia de X%, entre Y% e Z%").
+
+```bash
+python3 scripts/gerar_fazendas.py     # só se quiser outro conjunto: grava dados/semanas/fazendas.csv
+OSRM_BLOCO=40 python3 scripts/osrm_matriz.py https://router.project-osrm.org dados/semanas/fazendas.csv dados/semanas
+python3 scripts/semanas.py            # ~10 s; não chama o OSRM
+python3 scripts/mapa.py
+```
+As faixas de pedidos por dia de cada tipo de semana são premissas (topo do `semanas.py`). Quando o jeito de
+hoje não cabe na frota em algum dia, a semana é comparada com frota livre e fica marcada no resultado.
 
 ## Modelo exato
 `scripts/exato.py` confere a heurística contra o **ótimo provado** em instâncias pequenas. Ele pega os
